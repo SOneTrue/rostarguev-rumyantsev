@@ -1,0 +1,37 @@
+# Стандартные исключения Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Виртуальное окружение
+venv/
+.env/
+
+# Логи
+logs/*.log
+
+# Файлы базы данных
+test.db
+
+# Системные файлы
+.DS_Store
+thumbs.db
+
+# Файлы миграций Alembic (если будете использовать)
+migrations/versions/
+
+# Кэш и временные файлы
+*.tmp
+*.swp
+
+# Файлы настроек FastAPI (если есть локальные конфиги)
+config.local.json
+settings.local.json
+
+# Файлы документации (если не хотите версионировать)
+docs/build/
+
+# pycharm
+.idea
+.venv
