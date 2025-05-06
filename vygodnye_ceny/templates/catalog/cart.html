@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="text-2xl font-bold mb-4">Корзина</h2>
+
+{% if items %}
+<table class="w-full text-left border">
+  <thead>
+    <tr class="bg-gray-100">
+      <th class="p-2">Товар</th>
+      <th class="p-2 w-20 text-center">Кол-во</th>
+      <th class="p-2 w-28 text-right">Цена₽</th>
+      <th class="p-2 w-32 text-right">Сумма₽</th>
+      <th class="p-2 w-12"></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for it in items %}
+    <tr class="border-t">
+      <td class="p-2">{{ it.product.name }}</td>
+      <td class="p-2 text-center">{{ it.qty }}</td>
+      <td class="p-2 text-right">{{ it.price }}</td>
+      <td class="p-2 text-right font-semibold">{{ it.subtotal }}</td>
+      <td class="p-2 text-center">
+        <a href="{% url 'remove_from_cart' it.product.id %}" class="text-red-600">✕</a>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr class="bg-gray-100 font-bold">
+      <td class="p-2" colspan="3">Итого</td>
+      <td class="p-2 text-right">{{ total }}</td>
+      <td></td>
+    </tr>
+  </tfoot>
+</table>
+{% else %}
+  <p>Корзина пуста.</p>
+{% endif %}
+
+{% endblock %}

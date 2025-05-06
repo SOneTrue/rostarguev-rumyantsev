@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Выгодные цены</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 text-gray-900">
+<header class="bg-white shadow p-4">
+    <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-xl font-bold"><a href="/">Выгодные цены</a></h1>
+        <nav class="space-x-4">
+            <a href="/"                class="text-blue-600 hover:underline">Товары</a>
+            <a href="/cart/"           class="text-blue-600 hover:underline">Корзина</a>
+            <a href="/feedback/"       class="text-blue-600 hover:underline">Обратная связь</a>
+            <a href="/suggest-price/"  class="text-blue-600 hover:underline">Предложить цену</a>
+        </nav>
+    </div>
+</header>
+
+<main class="container mx-auto p-4">
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="bg-gray-100 text-center text-sm text-gray-500 p-4 mt-8">
+    © 2025 Выгодные цены — г. Буй
+</footer>
+</body>
+</html>
