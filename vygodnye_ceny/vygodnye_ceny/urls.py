@@ -14,8 +14,11 @@ urlpatterns = [
     path("auth/", include("djoser.urls")),
     path("auth/", include("djoser.urls.jwt")),
 
-    # API каталога
+    # DRF router (если используешь ViewSet)
     path("api/", include(catalog_router.urls)),
+
+    # 👇 обязательно добавь это!
+    path("api/", include("catalog.urls")),
 ]
 
 if settings.DEBUG:

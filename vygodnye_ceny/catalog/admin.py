@@ -32,5 +32,20 @@ class PriceSuggestionAdmin(admin.ModelAdmin):
     list_filter = ['approved', 'store']
     search_fields = ['product__name', 'author_name']
 
+    def save_model(self, request, obj, form, change):
+        """Обновляем цену в StoreProduct при одобрении"""
+        super().save_model(request, obj, form, change)
+
+        if obj.approved:
+            # Пытаемся найти StoreProduct
+            sp, created = StoreProduct.objects.get_or_create(
+                product=obj.product,
+                store=obj.store,
+                defaults={'price': obj.suggested_price}
+            )
+            if not created:
+                sp.price = obj.suggested_price
+                sp.save()
+
 admin.site.register(Category)
 admin.site.register(CartItem)

@@ -11,14 +11,23 @@ export default function ProductCard({ product }) {
     setInCart(!!found);
   }, [items, product.id]);
 
+  // Добавляем товар с минимальной ценой и магазином
   const handleAdd = () => {
+    const sortedPrices = [...product.prices].sort((a, b) => a.price - b.price);
+    const cheapest = sortedPrices[0];
+
     add({
       id: product.id,
       name: product.name,
-      price: product.prices[0]?.price ?? 0,
+      price: cheapest.price,
+      store: cheapest.store?.name ?? '-',
     });
-    setInCart(true); // немедленно показать "В корзине"
+
+    setInCart(true);
   };
+
+  // Найдём минимальную цену для отображения (для подсветки)
+  const minPrice = Math.min(...product.prices.map((p) => Number(p.price)));
 
   return (
     <div className="bg-white rounded-lg shadow hover:shadow-xl transition">
@@ -33,12 +42,10 @@ export default function ProductCard({ product }) {
         <div className="space-y-1 mb-3">
           {product.prices.map((p, index) => (
             <div className="flex justify-between text-sm" key={index}>
-              <span className="text-gray-600">
-                {p.store?.name ?? p.store}:
-              </span>
+              <span className="text-gray-600">{p.store?.name ?? p.store}:</span>
               <span
                 className={`font-medium ${
-                  p.discount ? 'text-red-500 line-through' : ''
+                  Number(p.price) > minPrice ? 'text-red-500 line-through' : ''
                 }`}
               >
                 {p.price} ₽
