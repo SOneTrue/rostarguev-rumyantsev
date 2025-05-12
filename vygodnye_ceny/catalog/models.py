@@ -1,63 +1,65 @@
+from django.conf import settings
 from django.db import models
 
-
 class Category(models.Model):
-    name = models.CharField("Категория", max_length=100)
+    name = models.CharField("Название категории", max_length=120)
 
     def __str__(self):
         return self.name
 
-
 class Store(models.Model):
-    name = models.CharField("Название магазина", max_length=100)
-    address = models.TextField("Адрес", blank=True)
+    name    = models.CharField("Название магазина", max_length=120)
+    address = models.CharField("Адрес", max_length=250, blank=True)
     website = models.URLField("Сайт", blank=True)
 
     def __str__(self):
         return self.name
 
-
 class Product(models.Model):
-    name = models.CharField("Название товара", max_length=200)
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, verbose_name="Категория")
-    image = models.ImageField("Изображение", upload_to='products/', blank=True)
+    name     = models.CharField("Название товара", max_length=120)
+    category = models.ForeignKey(Category, verbose_name="Категория", on_delete=models.CASCADE)
+    image    = models.ImageField("Изображение", upload_to='products/', blank=True)
 
     def __str__(self):
         return self.name
 
-
 class StoreProduct(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    price = models.DecimalField("Цена", max_digits=6, decimal_places=2)
-    discount = models.BooleanField("Есть скидка", default=False)
-    updated_at = models.DateTimeField("Обновлено", auto_now=True)
+    product  = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Товар")
+    store    = models.ForeignKey(Store,   on_delete=models.CASCADE, verbose_name="Магазин")
+    price    = models.DecimalField("Цена", max_digits=8, decimal_places=2)
+    discount = models.BooleanField("Скидка", default=False)
+    updated  = models.DateTimeField("Обновлено", auto_now=True)
 
     class Meta:
-        unique_together = ('product', 'store')
+        unique_together = ("product", "store")
+        verbose_name = "Цена товара в магазине"
+        verbose_name_plural = "Цены товаров по магазинам"
 
     def __str__(self):
-        return f"{self.product.name} в {self.store.name}"
-
-
-class Feedback(models.Model):
-    name = models.CharField("Имя", max_length=100)
-    email = models.EmailField("E-mail", blank=True)
-    message = models.TextField("Сообщение")
-    sent_at = models.DateTimeField("Дата отправки", auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.name} ({self.sent_at.strftime('%Y-%m-%d')})"
-
+        return f"{self.product} в {self.store}: {self.price}₽"
 
 class PriceSuggestion(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    suggested_price = models.DecimalField("Предлагаемая цена", max_digits=6, decimal_places=2)
-    author = models.CharField("Имя отправителя", max_length=100, blank=True)
-    comment = models.TextField("Комментарий", blank=True)
-    sent_at = models.DateTimeField("Дата", auto_now_add=True)
-    approved = models.BooleanField("Одобрено", default=False)
+    product         = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Товар")
+    store           = models.ForeignKey(Store,   on_delete=models.CASCADE, verbose_name="Магазин")
+    suggested_price = models.DecimalField("Предложенная цена", max_digits=8, decimal_places=2)
+    author_name     = models.CharField("Имя отправителя", max_length=120, blank=True)
+    comment         = models.TextField("Комментарий", blank=True)
+    approved        = models.BooleanField("Одобрено", default=False)
+    sent_at         = models.DateTimeField("Дата отправки", auto_now_add=True)
 
     def __str__(self):
-        return f"{self.product.name} - {self.suggested_price}₽"
+        return f"{self.product} в {self.store} – {self.suggested_price}₽"
+
+class CartItem(models.Model):
+    user     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Пользователь")
+    product  = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Товар")
+    quantity = models.PositiveIntegerField("Количество", default=1)
+    added_at = models.DateTimeField("Добавлено", auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "product")
+        verbose_name = "Товар в корзине"
+        verbose_name_plural = "Корзина"
+
+    def __str__(self):
+        return f"{self.user} – {self.product} x{self.quantity}"
