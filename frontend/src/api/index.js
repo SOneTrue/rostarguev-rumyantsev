@@ -1,27 +1,34 @@
 import axios from 'axios';
 
+// Основной API (для /api/...)
 export const api = axios.create({
-  baseURL: 'http://localhost:8000/api',  // уже содержит /api
+  baseURL: 'http://localhost:8000/api',
+  withCredentials: true,
 });
 
-// Аутентификация
-export const register = (data) => api.post('/auth/users/', data);
-export const login    = (data) => api.post('/auth/jwt/create/', data);
-
-// Авторизация
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('access');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-// Получение товаров
 export const fetchProducts = async () => {
   const { data } = await api.get('/products/');
   return data;
 };
 
-// Предложение цены
 export function sendPriceSuggestion(data) {
-  return api.post('/suggest-price/', data);  // ✅ без повторного /api
+  return api.post('/suggest-price/', data);
 }
+
+// ---- АВТОРИЗАЦИЯ ----
+
+export const authApi = axios.create({
+  baseURL: 'http://localhost:8000',
+  withCredentials: true,
+});
+
+authApi.interceptors.request.use(config => {
+  const token = localStorage.getItem('access');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// Регистрация и логин
+export const register = (data) => authApi.post('/auth/users/', data);
+export const login    = (data) => authApi.post('/auth/jwt/create/', data);
+export const getUser  = ()     => authApi.get('/auth/users/me/');

@@ -1,21 +1,28 @@
 import axios from 'axios';
-const baseURL = 'http://localhost:8000';
 
-export const api = axios.create({ baseURL, withCredentials: true });
+const api = axios.create({
+  baseURL: 'http://localhost:8000',
+  withCredentials: true,
+});
 
-/* ---------- AUTH ---------- */
+/* ---------- регистрация ---------- */
 export const register = ({ email, password }) =>
   api.post('/auth/users/', {
-    username: email,          // djoser требует username
+    username: email,     // 👈  дублируем e‑mail
     email,
     password,
   });
 
+/* ---------- логин ---------- */
 export const login = ({ email, password }) =>
-  api.post('/auth/jwt/create/', { email, password });
+  api.post('/auth/jwt/create/', {
+    username: email,   //  ←  без username Django выдаёт ошибку
+    email,
+    password,
+  });
 
-export const getMe = () =>
-  api.get('/auth/users/me/');
+/* ---------- текущий пользователь ---------- */
+export const getMe = () => api.get('/auth/users/me/');
 
 api.interceptors.request.use((conf) => {
   const token = localStorage.getItem('access');

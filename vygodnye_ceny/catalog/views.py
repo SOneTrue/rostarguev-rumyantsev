@@ -69,3 +69,4 @@ def api_send_suggestion(request):
 
 def product_list(request):
     return HttpResponse("Главная страница работает ✅")
+
