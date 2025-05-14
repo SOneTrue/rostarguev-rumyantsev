@@ -1,30 +1,33 @@
-// src/pages/AccountPage.jsx
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { api, getMyOrders } from "../api";   // axios + готовая обёртка
+import { api, getMyOrders } from "../api";
 
 export default function AccountPage() {
   const { user, ready } = useAuth();
-  const nav             = useNavigate();
+  const nav = useNavigate();
 
-  const [loading,      setLoading]      = useState(true);
-  const [suggestions,  setSuggestions]  = useState([]);
-  const [orders,       setOrders]       = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [suggestions, setSuggestions] = useState([]);
+  const [orders, setOrders] = useState([]);
 
-  /* загрузка данных */
   useEffect(() => {
-    if (!ready) return;                 // ждём, пока контекст станет готов
+    if (!ready) return;
 
     if (!user) {
-      nav("/login");                    // нет пользователя → на /login
+      nav("/login");
       return;
     }
 
     setLoading(true);
     Promise.all([
-      api.get("/suggest-price/?mine=1").then(r => setSuggestions(r.data)).catch(() => setSuggestions([])),
-      getMyOrders().then(r => setOrders(r.data)).catch(() => setOrders([])),
+      api.get("/suggest-price/?mine=1")
+        .then(r => setSuggestions(r.data))
+        .catch(() => setSuggestions([])),
+
+      getMyOrders()
+        .then(r => setOrders(r.data))
+        .catch(() => setOrders([])),
     ]).finally(() => setLoading(false));
   }, [ready, user, nav]);
 
@@ -32,7 +35,7 @@ export default function AccountPage() {
     <div className="container mx-auto max-w-4xl px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Личный кабинет</h1>
 
-      {/* ───── предложения цены ───── */}
+      {/* Предложения цены */}
       <section className="bg-white p-6 rounded shadow mb-8">
         <h2 className="text-xl font-semibold mb-4">Ваши предложения цен</h2>
 
@@ -68,7 +71,9 @@ export default function AccountPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{s.sent_at}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {new Date(s.sent_at).toLocaleDateString()}
+                      </td>
                     </tr>
                   ))
                 ) : (
@@ -84,7 +89,7 @@ export default function AccountPage() {
         )}
       </section>
 
-      {/* ───── история заказов ───── */}
+      {/* История заказов */}
       <section className="bg-white p-6 rounded shadow">
         <h2 className="text-xl font-semibold mb-4">История заказов</h2>
 
@@ -102,15 +107,17 @@ export default function AccountPage() {
             <tbody>
               {orders.map(o => (
                 <tr key={o.id} className="border-t">
-                  <td className="px-3 py-2">{o.date}</td>
+                  <td className="px-3 py-2">
+                    {new Date(o.date).toLocaleDateString()}
+                  </td>
                   <td className="px-3 py-2 whitespace-nowrap">{o.total} ₽</td>
                   <td className="px-3 py-2">
-                    <a
-                      href={`/order/${o.id}`}
+                    <Link
+                      to={`/orders/${o.id}`}
                       className="text-blue-600 hover:underline"
                     >
                       Просмотреть
-                    </a>
+                    </Link>
                   </td>
                 </tr>
               ))}

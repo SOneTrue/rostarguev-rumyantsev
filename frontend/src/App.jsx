@@ -10,7 +10,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 
 import { CartProvider } from './contexts/CartContext';
-import { AuthProvider } from './contexts/AuthContext'; // 👈 добавлено
+import { AuthProvider } from './contexts/AuthContext';
+import OrderDetailPage from "@/pages/OrderDetailPage.jsx"; // 👈 добавлено
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
               <Route path="/account" element={<AccountPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/orders/:orderId" element={<OrderDetailPage />} /> {/* 👈 новый маршрут */}
               <Route path="*" element={<HomePage />} />
             </Routes>
           </main>
