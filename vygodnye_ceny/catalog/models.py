@@ -53,11 +53,12 @@ class PriceSuggestion(models.Model):
 class CartItem(models.Model):
     user     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Пользователь")
     product  = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Товар")
+    store    = models.ForeignKey(Store, on_delete=models.CASCADE, verbose_name="Магазин", null=True)
     quantity = models.PositiveIntegerField("Количество", default=1)
     added_at = models.DateTimeField("Добавлено", auto_now_add=True)
 
     class Meta:
-        unique_together = ("user", "product")
+        unique_together = ("user", "product", "store")  # 👈 важно!
         verbose_name = "Товар в корзине"
         verbose_name_plural = "Корзина"
 

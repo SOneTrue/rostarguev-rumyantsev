@@ -14,4 +14,6 @@ urlpatterns = [
     path("suggest-price/",   views.api_suggest_price,       name="api_suggest_price"),
     path("checkout/",      views.api_checkout, name="api_checkout"),
     path("orders/",        views.api_orders,   name="api_orders"),
+    path("cart/add/", views.api_cart_add, name="api_cart_add"),
+
 ]

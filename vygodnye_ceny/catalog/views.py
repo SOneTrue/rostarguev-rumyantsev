@@ -1,4 +1,3 @@
-# catalog/views.py
 from django.http import JsonResponse, HttpResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -29,6 +28,7 @@ def api_product_list(request):
         store_prices = [
             {
                 "store": {"id": sp.store.id, "name": sp.store.name},
+                "store_id": sp.store.id,  # 👈 добавляем отдельно
                 "price": float(sp.price),
                 "discount": sp.discount,
             }
@@ -51,13 +51,11 @@ def api_product_list(request):
 
 
 def api_product_list_short(request):
-    """Список товаров (id + название) для форм."""
     products = Product.objects.all().values("id", "name")
     return JsonResponse(list(products), safe=False)
 
 
 def api_store_list(request):
-    """Список магазинов."""
     stores = Store.objects.all().values("id", "name")
     return JsonResponse(list(stores), safe=False)
 
@@ -66,7 +64,6 @@ def api_store_list(request):
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def api_suggest_price(request):
-    """GET — мои заявки, POST — создать новую заявку."""
     if request.method == "GET":
         mine = request.query_params.get("mine") == "1"
         qs = PriceSuggestion.objects.select_related("product", "store")
@@ -75,7 +72,6 @@ def api_suggest_price(request):
         data = PriceSuggestionSerializer(qs, many=True).data
         return Response(data)
 
-    # POST
     d = request.data
     obj = PriceSuggestion.objects.create(
         product_id=d["product"],
@@ -92,37 +88,42 @@ def api_suggest_price(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def api_checkout(request):
-    """Оформляет заказ из корзины текущего пользователя."""
-    cart = CartItem.objects.filter(user=request.user).select_related("product")
+    cart = CartItem.objects.filter(user=request.user).select_related("product", "store")
+
     if not cart.exists():
         return Response({"error": "Корзина пуста"}, status=400)
 
-    # считаем итог
-    total = sum(ci.product.storeproduct_set.get(store=ci.product.store).price * ci.quantity
-                for ci in cart)
+    total = 0
+    items = []
+
+    for ci in cart:
+        sp = StoreProduct.objects.filter(product=ci.product, store=ci.store).first()
+        if not sp:
+            continue  # Пропускаем, если нет цены
+        total += sp.price * ci.quantity
+        items.append(OrderItem(
+            product=ci.product,
+            quantity=ci.quantity,
+            price=sp.price,
+        ))
+
+    if not items:
+        return Response({"error": "Ни один товар не имеет цены"}, status=400)
 
     order = Order.objects.create(user=request.user, total=total)
+    for item in items:
+        item.order = order
 
-    OrderItem.objects.bulk_create(
-        [
-            OrderItem(
-                order=order,
-                product=ci.product,
-                quantity=ci.quantity,
-                price=ci.product.storeproduct_set.get(store=ci.product.store).price,
-            )
-            for ci in cart
-        ]
-    )
-    cart.delete()  # чистим корзину
+    OrderItem.objects.bulk_create(items)
+    cart.delete()
+
     return Response({"success": True, "order_id": order.id})
 
 
-# ───────────────────  СПИСОК / ДЕТАЛИ ЗАКАЗОВ  ────────────────────
+# ───────────────────  ЗАКАЗЫ ────────────────────
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def api_orders(request):
-    """GET /?mine=1 — все заказы пользователя; GET /?id=… — детали одного заказа."""
     order_id = request.query_params.get("id")
     qs = Order.objects.filter(user=request.user).prefetch_related("items__product")
 
@@ -132,12 +133,40 @@ def api_orders(request):
             return Response({"error": "Not found"}, status=404)
         return Response(OrderSerializer(order).data)
 
-    # краткий список для кабинета
     data = OrderSerializer(qs, many=True).data
     brief = [{"id": o["id"], "date": o["created_at"], "total": o["total"]} for o in data]
     return Response(brief)
 
 
-# ───────────────────  ПРОСТАЯ ТЕСТОВАЯ СТРАНИЦА  ────────────────────
+# ───────────────────  ДОБАВЛЕНИЕ В КОРЗИНУ ────────────────────
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def api_cart_add(request):
+    product_id = request.data.get("product")
+    store_id = request.data.get("store")
+    quantity = int(request.data.get("quantity", 1))
+
+    if not product_id or not store_id:
+        return Response({"error": "Не указан товар или магазин"}, status=400)
+
+    sp = StoreProduct.objects.filter(product_id=product_id, store_id=store_id).first()
+    if not sp:
+        return Response({"error": "Нет цены для этого товара в магазине"}, status=400)
+
+    item, created = CartItem.objects.get_or_create(
+        user=request.user,
+        product_id=product_id,
+        store_id=store_id,
+        defaults={"quantity": quantity}
+    )
+
+    if not created:
+        item.quantity += quantity
+        item.save()
+
+    return Response({"success": True})
+
+
+# ───────────────────  ТЕСТ ────────────────────
 def product_list(request):
     return HttpResponse("Главная страница работает ✅")

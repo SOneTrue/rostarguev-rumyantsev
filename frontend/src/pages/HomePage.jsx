@@ -4,14 +4,14 @@ import { useCart } from "../contexts/CartContext";
 
 export default function HomePage() {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState("");
-  const { items, add }          = useCart();  // ← получаем текущие товары в корзине
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const { items, add } = useCart();
 
   useEffect(() => {
     async function load() {
       try {
-        const data = await fetchProducts();
+        const data = await fetchProducts();  // 👈 правильно так
         setProducts(Array.isArray(data) ? data : []);
       } catch {
         setError("Не удалось загрузить товары");
@@ -34,10 +34,11 @@ export default function HomePage() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {products.map((p) => {
-            const inCart = items.some(i => i.id === p.id);       // ← проверка наличия в корзине
-            const hasDiscount = p.prices.some(pr => pr.discount);
-            const mainPrice = p.prices[0]?.price || 0;
-            const mainStore = p.prices[0]?.store?.name || "неизвестно";
+            const mainPrice = p.prices[0]?.price;
+            const mainStore = p.prices[0]?.store.name;
+            const store_id = p.prices[0]?.store.id;
+
+            const inCart = items.some(i => i.id === p.id && i.store_id === store_id);
 
             return (
               <div key={p.id} className="bg-white rounded-2xl shadow p-4 flex flex-col">
@@ -71,7 +72,15 @@ export default function HomePage() {
                 <button
                   onClick={() => {
                     if (!inCart) {
-                      add({ id: p.id, name: p.name, price: mainPrice, store: mainStore, quantity: 1 });
+                      add({
+                        id: p.id,
+                        name: p.name,
+                        price: mainPrice,
+                        store: mainStore,
+                        store_id: store_id,
+                        quantity: 1,
+                        image: p.image,
+                      });
                     }
                   }}
                   className={`mt-auto py-2 rounded text-sm font-medium transition ${
