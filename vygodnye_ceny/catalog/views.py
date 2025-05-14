@@ -28,18 +28,20 @@ def api_product_list(request):
         store_prices = [
             {
                 "store": {"id": sp.store.id, "name": sp.store.name},
-                "store_id": sp.store.id,  # 👈 добавляем отдельно
                 "price": float(sp.price),
                 "discount": sp.discount,
             }
             for sp in stores
         ]
 
+        # 👇 ИСПРАВЛЕНИЕ: полный URL изображения
+        image_url = request.build_absolute_uri(product.image.url) if product.image else None
+
         result.append(
             {
                 "id": product.id,
                 "name": product.name,
-                "image": product.image.url if product.image else None,
+                "image": image_url,  # 👈 исправленная строка
                 "category": {
                     "id": product.category.id,
                     "name": product.category.name,
