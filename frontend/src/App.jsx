@@ -27,7 +27,7 @@ export default function App() {
               <Route path="/account" element={<AccountPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
-              <Route path="/orders/:orderId" element={<OrderDetailPage />} /> {/* 👈 новый маршрут */}
+              <Route path="/orders/:orderId" element={<OrderDetailPage />} />
               <Route path="*" element={<HomePage />} />
             </Routes>
           </main>
