@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-
+from django.utils import timezone
 class Category(models.Model):
     name = models.CharField("Название категории", max_length=120)
 
@@ -63,3 +63,25 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f"{self.user} – {self.product} x{self.quantity}"
+
+
+class Order(models.Model):
+    user       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)  # ← только default
+    total      = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Заказ #{self.id} от {self.created_at:%d.%m.%Y}"
+
+
+class OrderItem(models.Model):
+    order    = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
+    product  = models.ForeignKey("Product", on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)      # оставляем default=1
+    price    = models.DecimalField(max_digits=8, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.product} x{self.quantity}"

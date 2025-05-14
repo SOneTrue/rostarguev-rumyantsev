@@ -1,96 +1,125 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { api } from '../api';              // тот же axios‑инстанс
+// src/pages/AccountPage.jsx
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { api, getMyOrders } from "../api";   // axios + готовая обёртка
 
 export default function AccountPage() {
-  const { user } = useAuth();
-  const nav = useNavigate();
-  const [suggestions, setSuggestions] = useState([]);
-  const [orders, setOrders] = useState([]);
+  const { user, ready } = useAuth();
+  const nav             = useNavigate();
 
+  const [loading,      setLoading]      = useState(true);
+  const [suggestions,  setSuggestions]  = useState([]);
+  const [orders,       setOrders]       = useState([]);
+
+  /* загрузка данных */
   useEffect(() => {
-    if (!user) return nav('/login');
+    if (!ready) return;                 // ждём, пока контекст станет готов
 
-    // примеры энд‑пойнтов — замени на реальные при желании
-    api.get('/api/suggest-price/?mine=1').then(r => setSuggestions(r.data))
-      .catch(() => setSuggestions([]));
+    if (!user) {
+      nav("/login");                    // нет пользователя → на /login
+      return;
+    }
 
-    api.get('/api/orders/?mine=1').then(r => setOrders(r.data))
-      .catch(() => setOrders([]));
-  }, [user, nav]);
+    setLoading(true);
+    Promise.all([
+      api.get("/suggest-price/?mine=1").then(r => setSuggestions(r.data)).catch(() => setSuggestions([])),
+      getMyOrders().then(r => setOrders(r.data)).catch(() => setOrders([])),
+    ]).finally(() => setLoading(false));
+  }, [ready, user, nav]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h2 className="text-3xl font-bold mb-6">Личный кабинет</h2>
+    <div className="container mx-auto max-w-4xl px-4 py-8">
+      <h1 className="text-3xl font-bold mb-6">Личный кабинет</h1>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* ─────────  предложения  ───────── */}
-        <section className="bg-white p-6 rounded shadow overflow-x-auto">
-          <h3 className="text-xl font-semibold mb-4">Ваши предложения цен</h3>
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-2 py-1 text-left">Товар</th>
-                <th className="px-2 py-1 text-left">Магазин</th>
-                <th className="px-2 py-1">Предложенная цена</th>
-                <th className="px-2 py-1">Статус</th>
-                <th className="px-2 py-1">Дата отправки</th>
-              </tr>
-            </thead>
-            <tbody>
-              {suggestions.map(s => (
-                <tr key={s.id} className="border-t">
-                  <td className="px-2 py-1">{s.product}</td>
-                  <td className="px-2 py-1">{s.store}</td>
-                  <td className="px-2 py-1 whitespace-nowrap">{s.suggested_price} ₽</td>
-                  <td className="px-2 py-1">
-                    {s.approved
-                      ? <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs">Одобрено</span>
-                      : <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs">На рассмотрении</span>}
-                  </td>
-                  <td className="px-2 py-1 whitespace-nowrap">{s.sent_at}</td>
+      {/* ───── предложения цены ───── */}
+      <section className="bg-white p-6 rounded shadow mb-8">
+        <h2 className="text-xl font-semibold mb-4">Ваши предложения цен</h2>
+
+        {loading ? (
+          <p className="text-gray-500">Загрузка...</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left">Товар</th>
+                  <th className="px-3 py-2 text-left">Магазин</th>
+                  <th className="px-3 py-2 whitespace-nowrap">Предложенная&nbsp;цена</th>
+                  <th className="px-3 py-2">Статус</th>
+                  <th className="px-3 py-2 whitespace-nowrap">Дата&nbsp;отправки</th>
                 </tr>
-              ))}
-              {!suggestions.length && (
-                <tr><td colSpan={5} className="p-4 text-center text-gray-500">Нет предложений</td></tr>
-              )}
-            </tbody>
-          </table>
-        </section>
+              </thead>
+              <tbody>
+                {suggestions.length ? (
+                  suggestions.map(s => (
+                    <tr key={s.id} className="border-t">
+                      <td className="px-3 py-2">{s.product}</td>
+                      <td className="px-3 py-2">{s.store}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{s.suggested_price}&nbsp;₽</td>
+                      <td className="px-3 py-2">
+                        {s.approved ? (
+                          <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded">
+                            Одобрено
+                          </span>
+                        ) : (
+                          <span className="inline-block bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded">
+                            На&nbsp;рассмотрении
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">{s.sent_at}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-6 text-center text-gray-500">
+                      У вас пока нет предложений.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
-        {/* ─────────  заказы  ───────── */}
-        <section className="bg-white p-6 rounded shadow overflow-x-auto">
-          <h3 className="text-xl font-semibold mb-4">История заказов</h3>
+      {/* ───── история заказов ───── */}
+      <section className="bg-white p-6 rounded shadow">
+        <h2 className="text-xl font-semibold mb-4">История заказов</h2>
+
+        {loading ? (
+          <p className="text-gray-500">Загрузка...</p>
+        ) : orders.length ? (
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-2 py-1 text-left">Дата</th>
-                <th className="px-2 py-1">Сумма</th>
-                <th className="px-2 py-1">Детали</th>
+                <th className="px-3 py-2 text-left">Дата</th>
+                <th className="px-3 py-2">Сумма</th>
+                <th className="px-3 py-2">Детали</th>
               </tr>
             </thead>
             <tbody>
               {orders.map(o => (
                 <tr key={o.id} className="border-t">
-                  <td className="px-2 py-1">{o.date}</td>
-                  <td className="px-2 py-1 whitespace-nowrap">{o.total} ₽</td>
-                  <td className="px-2 py-1">
-                    <a href={`/order/${o.id}`} className="text-blue-600 hover:underline">Просмотреть</a>
+                  <td className="px-3 py-2">{o.date}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{o.total} ₽</td>
+                  <td className="px-3 py-2">
+                    <a
+                      href={`/order/${o.id}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      Просмотреть
+                    </a>
                   </td>
                 </tr>
               ))}
-              {!orders.length && (
-                <tr><td colSpan={3} className="p-4 text-center text-gray-500">Заказов пока нет</td></tr>
-              )}
             </tbody>
           </table>
-        </section>
-      </div>
-
-      <div className="mt-8 text-center">
-        <a href="/" className="text-blue-600 hover:underline">Вернуться к каталогу</a>
-      </div>
+        ) : (
+          <p className="text-gray-500">Заказов пока нет.</p>
+        )}
+      </section>
     </div>
   );
 }

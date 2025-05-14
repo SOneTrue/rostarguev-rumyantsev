@@ -1,29 +1,49 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import { getUser } from '../api';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { getUser } from "../api";        // GET /auth/users/me/
 
-const AuthContext = createContext();
+const AuthCtx = createContext();
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+/**
+ * Оборачивает всё приложение и даёт:
+ *   user  – объект пользователя или null
+ *   ready – true, когда запрос /me завершён
+ *   loadUser() – перезагрузить профиль
+ */
+export function AuthProvider({ children }) {
+  const [user, setUser]   = useState(null);
+  const [ready, setReady] = useState(false);
 
-  const loadUser = async () => {
+  /** запрашиваем данные профиля */
+  const loadUser = useCallback(async () => {
     try {
       const { data } = await getUser();
       setUser(data);
     } catch {
       setUser(null);
+    } finally {
+      setReady(true);       // запрос окончен (успех или ошибка)
     }
-  };
-
-  useEffect(() => {
-    loadUser();
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, loadUser }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  /* первый запрос при старте приложения */
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
 
-export const useAuth = () => useContext(AuthContext);
+  return (
+    <AuthCtx.Provider value={{ user, ready, loadUser }}>
+      {children}
+    </AuthCtx.Provider>
+  );
+}
+
+/** удобный хук */
+export function useAuth() {
+  return useContext(AuthCtx);
+}
