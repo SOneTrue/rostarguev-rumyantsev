@@ -1,12 +1,4 @@
-import os
-
-from django.conf import settings
-from django.http import HttpResponse
 from django.http import JsonResponse
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfgen import canvas
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework.decorators import api_view, permission_classes
@@ -30,7 +22,6 @@ from .serializers import (
 
 # ───────────────────  ТОВАРЫ / МАГАЗИНЫ  ────────────────────
 def api_product_list(request):
-    """Список товаров + цены по магазинам."""
     products = Product.objects.all()
     result = []
 
@@ -41,18 +32,17 @@ def api_product_list(request):
                 "store": {"id": sp.store.id, "name": sp.store.name},
                 "price": float(sp.price),
                 "discount": sp.discount,
+                "stock": sp.stock,  # <= Добавить!
             }
             for sp in stores
         ]
-
-        # 👇 ИСПРАВЛЕНИЕ: полный URL изображения
         image_url = request.build_absolute_uri(product.image.url) if product.image else None
 
         result.append(
             {
                 "id": product.id,
                 "name": product.name,
-                "image": image_url,  # 👈 исправленная строка
+                "image": image_url,
                 "category": {
                     "id": product.category.id,
                     "name": product.category.name,
@@ -168,12 +158,12 @@ def api_cart_add(request):
     store_id = request.data.get("store")
     quantity = int(request.data.get("quantity", 1))
 
-    if not product_id or not store_id:
-        return Response({"error": "Не указан товар или магазин"}, status=400)
-
     sp = StoreProduct.objects.filter(product_id=product_id, store_id=store_id).first()
     if not sp:
         return Response({"error": "Нет цены для этого товара в магазине"}, status=400)
+
+    if quantity > sp.stock:
+        quantity = sp.stock  # просто обрежь на максимум
 
     item, created = CartItem.objects.get_or_create(
         user=request.user,
@@ -183,10 +173,10 @@ def api_cart_add(request):
     )
 
     if not created:
-        item.quantity += quantity
+        item.quantity = quantity
         item.save()
 
-    return Response({"success": True})
+    return Response({"success": True, "quantity": item.quantity, "stock": sp.stock})
 
 
 class OrderViewSet(viewsets.ModelViewSet):

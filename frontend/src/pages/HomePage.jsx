@@ -147,7 +147,7 @@ export default function HomePage() {
                         store_id: sortedPrices[0].store.id,
                         quantity: 1,
                         image: p.image,
-                        stock: sortedPrices[0].stock,
+                        stock: p.prices[0]?.stock,   // <-- вот это важно!
                       });
                     }
                   }}
