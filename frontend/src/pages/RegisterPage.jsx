@@ -1,22 +1,71 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { register, login } from '../api/auth';   // понадобился login
+import { register, login } from '../api/auth';
 import { useAuth } from '../contexts/AuthContext';
+
+// Функция для преобразования ошибок к одному сообщению на русском
+function getReadableError(data) {
+  // Ошибки поля email
+  if (data?.email) {
+    if (
+      Array.isArray(data.email) &&
+      data.email.some(e => e.includes('valid email'))
+    ) {
+      return "Введите корректный email.";
+    }
+    if (
+      Array.isArray(data.email) &&
+      data.email.some(e => e.toLowerCase().includes('already exists'))
+    ) {
+      return "Пользователь с таким email уже зарегистрирован.";
+    }
+  }
+
+  // Ошибки пароля
+  if (data?.password) {
+    if (
+      Array.isArray(data.password) &&
+      data.password.some(e => e.includes('too short'))
+    ) {
+      return "Пароль слишком короткий. Минимум 8 символов.";
+    }
+    if (
+      Array.isArray(data.password) &&
+      data.password.some(e => e.includes('entirely numeric'))
+    ) {
+      return "Пароль не должен состоять только из цифр.";
+    }
+    if (
+      Array.isArray(data.password) &&
+      data.password.some(e => e.includes('too common'))
+    ) {
+      return "Пароль слишком простой.";
+    }
+  }
+
+  // Общие или неизвестные ошибки
+  if (typeof data === "string" && data.includes('Пароли не совпадают')) {
+    return data;
+  }
+  if (typeof data === "string") {
+    return data;
+  }
+  return "Проверьте корректность заполнения формы.";
+}
 
 export default function RegisterPage() {
   const nav = useNavigate();
   const { loadUser } = useAuth();
 
   const [form, setForm] = useState({ email: '', pass1: '', pass2: '' });
-  const [err,  setErr]  = useState('');
-  const [ok,   setOk]   = useState(false);
+  const [err, setErr] = useState('');
 
   const submit = async (e) => {
     e.preventDefault();
-    setErr('');
 
     if (form.pass1 !== form.pass2) {
-      return setErr('Пароли не совпадают');
+      setErr('Пароли не совпадают.');
+      return;
     }
 
     try {
@@ -27,47 +76,49 @@ export default function RegisterPage() {
       localStorage.setItem('access', data.access);
       await loadUser();
 
-      setOk(true);                 // покажем уведомление
-      setTimeout(() => nav('/account'), 5000);
+      nav('/account', {
+        state: { message: 'Регистрация прошла успешно! Вход выполнен.' }
+      });
     } catch (e) {
+      if (!e.response) {
+        setErr('Нет соединения с сервером. Проверьте интернет и попробуйте снова.');
+        return;
+      }
       const data = e.response?.data;
-      if (data?.password)       setErr('Слабый пароль');
-      else if (data?.email)     setErr('Email уже используется');
-      else                      setErr('Ошибка регистрации');
+      setErr(getReadableError(data));
     }
   };
 
-  /* --------- UI --------- */
   return (
     <div className="container mx-auto px-4 py-8 max-w-md">
       <h2 className="text-3xl font-bold mb-6 text-center">Регистрация</h2>
 
-      {ok && (
-        <div className="mb-4 text-green-700 bg-green-100 p-3 rounded">
-          Аккаунт создан, вход выполнен! Перенаправляем в&nbsp;профиль…
-        </div>
-      )}
       {err && (
-        <div className="mb-4 text-red-600">{err}</div>
+        <div className="mb-4 bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded text-center">
+          {err}
+        </div>
       )}
 
       <form onSubmit={submit} className="bg-white p-6 rounded shadow">
         <input
-          type="email" placeholder="Email"
+          type="email"
+          placeholder="Email"
           className="w-full border rounded px-3 py-2 mb-4"
           value={form.email}
           onChange={e => setForm({ ...form, email: e.target.value })}
           required
         />
         <input
-          type="password" placeholder="Пароль"
+          type="password"
+          placeholder="Пароль"
           className="w-full border rounded px-3 py-2 mb-4"
           value={form.pass1}
           onChange={e => setForm({ ...form, pass1: e.target.value })}
           required
         />
         <input
-          type="password" placeholder="Повторите пароль"
+          type="password"
+          placeholder="Повторите пароль"
           className="w-full border rounded px-3 py-2 mb-4"
           value={form.pass2}
           onChange={e => setForm({ ...form, pass2: e.target.value })}

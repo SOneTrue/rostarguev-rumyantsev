@@ -68,8 +68,17 @@ class CartItem(models.Model):
 
 class Order(models.Model):
     user       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(default=timezone.now, editable=False)  # ← только default
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
     total      = models.DecimalField(max_digits=10, decimal_places=2)
+    # ДОБАВЬ ЭТО поле:
+    STATUS_CHOICES = [
+        ('pending', 'В обработке'),
+        ('delivering', 'Доставляется'),
+        ('delivered', 'Доставлен'),
+    ]
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='Статус'
+    )
 
     class Meta:
         ordering = ["-created_at"]

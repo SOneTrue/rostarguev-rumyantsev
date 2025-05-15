@@ -1,4 +1,6 @@
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
+from rest_framework import status
+from rest_framework import viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -16,6 +18,7 @@ from .serializers import (
     PriceSuggestionSerializer,
     OrderSerializer,
 )
+
 
 # ───────────────────  ТОВАРЫ / МАГАЗИНЫ  ────────────────────
 def api_product_list(request):
@@ -112,7 +115,7 @@ def api_checkout(request):
     if not items:
         return Response({"error": "Ни один товар не имеет цены"}, status=400)
 
-    order = Order.objects.create(user=request.user, total=total)
+    order = Order.objects.create(user=request.user, total=total, status='pending')
     for item in items:
         item.order = order
 
@@ -136,7 +139,16 @@ def api_orders(request):
         return Response(OrderSerializer(order).data)
 
     data = OrderSerializer(qs, many=True).data
-    brief = [{"id": o["id"], "date": o["created_at"], "total": o["total"]} for o in data]
+    # Возвращаем теперь полный список нужных полей
+    brief = [
+        {
+            "id": o["id"],
+            "created_at": o["created_at"],   # поле с датой создания
+            "total": o["total"],
+            "status": o.get("status", "-"),  # актуальный статус
+        }
+        for o in data
+    ]
     return Response(brief)
 
 
@@ -169,6 +181,30 @@ def api_cart_add(request):
     return Response({"success": True})
 
 
-# ───────────────────  ТЕСТ ────────────────────
-def product_list(request):
-    return HttpResponse("Главная страница работает ✅")
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Разрешить видеть только свои заказы
+        return self.queryset.filter(user=self.request.user)
+
+
+@api_view(['GET', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def api_order_detail(request, pk):
+    try:
+        order = Order.objects.get(pk=pk, user=request.user)
+    except Order.DoesNotExist:
+        return Response({'error': 'Заказ не найден'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = OrderSerializer(order)
+        return Response(serializer.data)
+    elif request.method == 'PATCH':
+        serializer = OrderSerializer(order, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

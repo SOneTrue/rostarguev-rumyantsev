@@ -8,87 +8,161 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [updating, setUpdating] = useState(false);
+
+  async function loadOrder() {
+    try {
+      const { data } = await api.get(`/orders/${orderId}/`);
+      setOrder(data);
+    } catch {
+      setError('Не удалось загрузить заказ.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function loadOrder() {
-      try {
-        const { data } = await api.get(`/orders/?id=${orderId}`);
-        setOrder(data);
-      } catch {
-        setError('Не удалось загрузить заказ.');
-      } finally {
-        setLoading(false);
-      }
-    }
     loadOrder();
+    // eslint-disable-next-line
   }, [orderId]);
+
+  async function markDelivered() {
+    setUpdating(true);
+    try {
+      // Сначала ставим статус "Доставляется"
+      await api.patch(`/orders/${orderId}/`, { status: 'delivering' });
+      // Потом (например, через 1.5 секунды) — "Доставлен"
+      setTimeout(async () => {
+        await api.patch(`/orders/${orderId}/`, { status: 'delivered' });
+        await loadOrder();
+        setUpdating(false);
+      }, 1500);
+    } catch {
+      setUpdating(false);
+      alert('Ошибка при подтверждении доставки');
+    }
+  }
+
+  function downloadReceipt() {
+    const html = `
+      <html>
+        <head><meta charset="utf-8"><title>Чек заказа #${order.id}</title></head>
+        <body>
+          <h2>Чек заказа #${order.id}</h2>
+          <p><strong>Дата:</strong> ${new Date(order.created_at).toLocaleDateString()}</p>
+          <table border="1" cellpadding="5" cellspacing="0">
+            <thead>
+              <tr>
+                <th>Товар</th><th>Цена</th><th>Количество</th><th>Сумма</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${order.items.map(item => `
+                <tr>
+                  <td>${item.product.name}</td>
+                  <td>${item.price} ₽</td>
+                  <td>${item.quantity}</td>
+                  <td>${item.price * item.quantity} ₽</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <p><strong>Итого:</strong> ${order.total} ₽</p>
+        </body>
+      </html>
+    `;
+    const blob = new Blob([html], { type: 'text/html' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `order_${order.id}_receipt.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
   if (loading) return <div className="text-center py-12">Загрузка...</div>;
   if (error) return <div className="text-center text-red-600 py-12">{error}</div>;
 
-  return (
-    <main className="container mx-auto px-4 py-8 max-w-4xl">
-      <h2 className="text-3xl font-bold mb-6 text-center">Детали заказа #{order.id}</h2>
+  // Рендер статуса
+  const statusInfo = {
+    delivering: { label: 'Доставляется', className: "bg-yellow-100 text-yellow-800" },
+    delivered: { label: 'Доставлен', className: "bg-green-100 text-green-800" },
+    pending: { label: 'В обработке', className: "bg-gray-100 text-gray-800" },
+  };
+  const currentStatus = statusInfo[order.status] || { label: order.status, className: "" };
 
-      <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h3 className="font-semibold text-lg mb-2">Информация о заказе</h3>
-              <p><strong>Дата:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
-              <p>
-                <strong>Статус:</strong>
-                <span className="ml-2 inline-block px-2 py-1 rounded bg-green-100 text-green-800">
-                  Завершен
-                </span>
-              </p>
-            </div>
+  return (
+    <main className="container mx-auto px-4 py-8 max-w-2xl">
+      <div className="bg-white rounded-2xl shadow-lg p-8">
+        <h2 className="text-2xl font-bold mb-6 text-center">Детали заказа #{order.id}</h2>
+        <div className="mb-4 flex flex-col md:flex-row md:justify-between gap-2">
+          <div>
+            <span className="block"><strong>Дата:</strong> {order.created_at ? new Date(order.created_at).toLocaleDateString() : "-"}</span>
+            <span className="block mt-1">
+              <strong>Статус:</strong>
+              <span className={`ml-2 inline-block px-2 py-1 rounded ${currentStatus.className}`}>
+                {currentStatus.label}
+              </span>
+            </span>
+          </div>
+          <div className="flex md:items-end justify-start md:justify-end mt-2 md:mt-0">
+            <span className="text-lg font-bold">Итого: {order.total} ₽</span>
           </div>
         </div>
-
-        <div className="border-t">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-x-auto rounded-xl border">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3">Товар</th>
-                <th className="px-6 py-3">Цена</th>
-                <th className="px-6 py-3">Количество</th>
-                <th className="px-6 py-3">Сумма</th>
+                <th className="px-4 py-3 text-left">Товар</th>
+                <th className="px-4 py-3 text-right">Цена</th>
+                <th className="px-4 py-3 text-center">Количество</th>
+                <th className="px-4 py-3 text-right">Сумма</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y">
               {order.items.map((item) => (
                 <tr key={item.id}>
-                  <td className="px-6 py-4">{item.product.name}</td>
-                  <td className="px-6 py-4">{item.price} ₽</td>
-                  <td className="px-6 py-4">{item.quantity}</td>
-                  <td className="px-6 py-4">{item.price * item.quantity} ₽</td>
+                  <td className="px-4 py-3">{item.product.name}</td>
+                  <td className="px-4 py-3 text-right">{item.price} ₽</td>
+                  <td className="px-4 py-3 text-center">{item.quantity}</td>
+                  <td className="px-4 py-3 text-right">{item.price * item.quantity} ₽</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-
-        <div className="bg-gray-50 p-6 border-t">
-          <div className="flex justify-end">
-            <span className="text-lg font-bold">Итого: {order.total} ₽</span>
-          </div>
+        <div className="flex justify-center space-x-4 mt-8">
+          <button
+            onClick={() => navigate('/account')}
+            className="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700"
+          >
+            Назад к профилю
+          </button>
+          {order.status === "delivered" ? (
+            <>
+              <button
+                onClick={() => window.print()}
+                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+              >
+                Распечатать
+              </button>
+              <button
+                onClick={downloadReceipt}
+                className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+              >
+                Скачать чек
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={markDelivered}
+              className="bg-yellow-500 text-white px-6 py-2 rounded hover:bg-yellow-600"
+              disabled={updating}
+            >
+              {updating ? "Подтверждение..." : "Подтвердить доставку"}
+            </button>
+          )}
         </div>
-      </div>
-
-      <div className="flex justify-center space-x-4 mt-6">
-        <button
-          onClick={() => navigate('/account')}
-          className="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700"
-        >
-          Назад к профилю
-        </button>
-        <button
-          onClick={() => window.print()}
-          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-        >
-          Распечатать
-        </button>
       </div>
     </main>
   );
