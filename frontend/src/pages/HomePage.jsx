@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchProducts, fetchStores } from "../api";
+import { fetchProducts } from "../api";
 import { useCart } from "../contexts/CartContext";
 
 export default function HomePage() {
@@ -13,9 +13,8 @@ export default function HomePage() {
   const [store, setStore] = useState("");
   const [search, setSearch] = useState("");
 
-  const { items, add } = useCart();
+  const { items, add, remove } = useCart();
 
-  // Получаем товары, магазины, категории
   useEffect(() => {
     async function loadAll() {
       try {
@@ -23,7 +22,7 @@ export default function HomePage() {
         const data = await fetchProducts();
         setAllProducts(Array.isArray(data) ? data : []);
         setProducts(Array.isArray(data) ? data : []);
-        // Категории собираем из товаров
+        // Категории из товаров
         const cats = Array.from(new Set(data.map(p => p.category?.name).filter(Boolean)));
         setCategories(cats);
         // Магазины из цен
@@ -39,7 +38,6 @@ export default function HomePage() {
     loadAll();
   }, []);
 
-  // Фильтрация и поиск
   useEffect(() => {
     let filtered = allProducts;
     if (category)
@@ -62,7 +60,6 @@ export default function HomePage() {
 
       {/* --- Фильтры --- */}
       <div className="flex flex-wrap gap-4 mb-6">
-        {/* Категории */}
         <select
           className="border rounded px-3 py-2"
           value={category}
@@ -73,8 +70,6 @@ export default function HomePage() {
             <option key={cat} value={cat}>{cat}</option>
           ))}
         </select>
-
-        {/* Магазины */}
         <select
           className="border rounded px-3 py-2"
           value={store}
@@ -85,8 +80,6 @@ export default function HomePage() {
             <option key={st.id} value={st.id}>{st.name}</option>
           ))}
         </select>
-
-        {/* Поиск */}
         <input
           type="text"
           className="border rounded px-3 py-2 flex-1 min-w-[180px]"
@@ -102,6 +95,9 @@ export default function HomePage() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {products.map((p) => {
+            // Сортируем цены по возрастанию (самый дешевый магазин первым)
+            const sortedPrices = [...p.prices].sort((a, b) => a.price - b.price);
+            const minPrice = sortedPrices.length > 0 ? sortedPrices[0].price : null;
             const inCart = items.some(i => i.id === p.id);
 
             return (
@@ -115,41 +111,51 @@ export default function HomePage() {
                 )}
                 <h2 className="font-semibold mb-2">{p.name}</h2>
                 <div className="text-sm mb-4 space-y-1">
-                  {p.prices.map((sp, idx) => (
+                  {sortedPrices.map((sp, idx) => (
                     <div key={idx} className="flex justify-between">
                       <span className="text-gray-600">{sp.store.name}:</span>
-                      <span>
-                        {sp.discount ? (
-                          <>
-                            <span className="line-through text-red-500 mr-2">{sp.old_price ? `${sp.old_price} ₽` : `${(sp.price + 50)} ₽`}</span>
-                            <span className="font-bold">{sp.price} ₽</span>
-                          </>
-                        ) : (
-                          <span className="font-bold">{sp.price} ₽</span>
-                        )}
-                      </span>
+                      {sp.price > minPrice ? (
+                        <span className="line-through text-red-500 font-medium">{sp.price} ₽</span>
+                      ) : (
+                        <span className="font-bold">{sp.price} ₽</span>
+                      )}
                     </div>
                   ))}
                 </div>
+                {inCart ? (
                 <button
-                  onClick={() => !inCart && add({
-                    id: p.id,
-                    name: p.name,
-                    price: p.prices[0]?.price,
-                    store: p.prices[0]?.store.name,
-                    store_id: p.prices[0]?.store.id,
-                    quantity: 1,
-                    image: p.image,
-                  })}
-                  className={`mt-auto py-2 rounded text-sm font-medium transition ${
-                    inCart
-                      ? "bg-red-600 text-white cursor-default"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
-                  }`}
-                  disabled={inCart}
+                  onClick={() => {
+                    // Находим этот товар из корзины по id и store_id (у тебя в корзине есть оба)
+                    const itemInCart = items.find(i => i.id === p.id && i.store_id === sortedPrices[0].store.id);
+                    if (itemInCart) {
+                      remove(itemInCart.id, itemInCart.store_id);
+                    }
+                  }}
+                  className="mt-auto py-2 rounded text-sm font-medium transition bg-red-600 text-white hover:bg-red-700"
                 >
-                  {inCart ? "В корзине" : "В корзину"}
+                  Удалить из корзины
                 </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (!inCart && sortedPrices.length > 0) {
+                      add({
+                        id: p.id,
+                        name: p.name,
+                        price: sortedPrices[0].price,
+                        store: sortedPrices[0].store.name,
+                        store_id: sortedPrices[0].store.id,
+                        quantity: 1,
+                        image: p.image,
+                        stock: sortedPrices[0].stock,
+                      });
+                    }
+                  }}
+                  className="mt-auto py-2 rounded text-sm font-medium transition bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  В корзину
+                </button>
+              )}
               </div>
             );
           })}
