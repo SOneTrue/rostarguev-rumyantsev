@@ -1,74 +1,96 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { api } from "../api"; // ← Используем только api, не axios напрямую
 
 const CartContext = createContext();
 
-function getSavedCart() {
-  try {
-    return JSON.parse(localStorage.getItem('cart-items') || '[]');
-  } catch {
-    return [];
-  }
-}
-
-function saveCart(items) {
-  localStorage.setItem('cart-items', JSON.stringify(items));
-}
-
 export const CartProvider = ({ children }) => {
-  const [items, setItems] = useState(getSavedCart());
-  const [error, setError] = useState('');
+  const [items, setItems] = useState([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Сохраняем корзину при любом изменении
+  // Получаем корзину с сервера
+  async function fetchCart() {
+    setLoading(true);
+    try {
+      const { data } = await api.get("/cart/");
+      setItems(data);
+      setError("");
+    } catch (e) {
+      setError("Не удалось загрузить корзину");
+      setItems([]);
+    }
+    setLoading(false);
+  }
+
   useEffect(() => {
-    saveCart(items);
-  }, [items]);
+    fetchCart();
+    // Если нужно: добавить реакцию на изменение авторизации (например, user)
+    // Можно подписаться на события AuthContext, если есть
+  }, []);
 
   // Добавить товар
-  const add = (p) => {
-    setError('');
-    // Проверим, сколько уже есть
-    const index = items.findIndex((i) => i.id === p.id && i.store_id === p.store_id);
-    const stock = Number(p.stock ?? 99); // если нет stock, пусть будет 99
-    let newItems = [...items];
-
-    if (index >= 0) {
-      const currQty = newItems[index].quantity;
-      if (currQty + 1 > stock) {
-        setError('Нельзя добавить больше — такого количества товара нет в наличии.');
-        return;
-      }
-      newItems[index] = { ...newItems[index], quantity: currQty + 1 };
-    } else {
-      if (stock < 1) {
-        setError('Товара нет в наличии.');
-        return;
-      }
-      newItems.push({ ...p, quantity: 1 });
+  async function add(p, qty = 1) {
+    setError("");
+    setLoading(true);
+    try {
+      await api.post("/cart/add/", {
+        product: p.id,
+        store: p.store_id,
+        quantity: qty,
+      });
+      await fetchCart();
+    } catch (e) {
+      setError(e?.response?.data?.error || "Ошибка при добавлении товара");
     }
+    setLoading(false);
+  }
 
-    setItems(newItems);
-  };
-
-  // Обновить количество
-  const updateQty = (id, store_id, qty, maxStock) => {
-    setError('');
-    let q = Math.max(1, Number(qty) || 1);
-    if (q > maxStock) {
-      setError(`Доступно только ${maxStock} шт. этого товара`);
-      q = maxStock;
+  // Изменить количество
+  async function updateQty(id, store_id, qty, stock) {
+    setError("");
+    setLoading(true);
+    try {
+      await api.post("/cart/add/", {
+        product: id,
+        store: store_id,
+        quantity: qty,
+      });
+      await fetchCart();
+    } catch (e) {
+      setError(e?.response?.data?.error || "Ошибка при изменении количества");
     }
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === id && i.store_id === store_id ? { ...i, quantity: q } : i
-      )
-    );
-  };
+    setLoading(false);
+  }
 
-  const remove = (id, store_id) => {
-    setItems((prev) => prev.filter((i) => !(i.id === id && i.store_id === store_id)));
-  };
+  // Удалить товар (через обнуление количества)
+  async function remove(id, store_id) {
+    setError("");
+    setLoading(true);
+    try {
+      await api.post("/cart/add/", {
+        product: id,
+        store: store_id,
+        quantity: 0, // Сервер должен удалить или игнорировать item с qty=0
+      });
+      await fetchCart();
+    } catch (e) {
+      setError(e?.response?.data?.error || "Ошибка при удалении товара");
+    }
+    setLoading(false);
+  }
 
-  const clear = () => setItems([]);
+  // Очистить корзину (на сервере должен быть endpoint /cart/clear/)
+  async function clear() {
+    setError("");
+    setLoading(true);
+    try {
+      await api.post("/cart/clear/");
+      await fetchCart();
+    } catch (e) {
+      setError("Ошибка при очистке корзины");
+    }
+    setLoading(false);
+  }
 
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
@@ -83,6 +105,8 @@ export const CartProvider = ({ children }) => {
         total,
         error,
         setError,
+        loading,
+        fetchCart,
       }}
     >
       {children}

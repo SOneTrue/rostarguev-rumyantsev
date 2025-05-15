@@ -216,6 +216,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 import os
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_order_receipt_pdf(request, pk):
@@ -254,3 +255,23 @@ def api_order_receipt_pdf(request, pk):
     p.showPage()
     p.save()
     return response
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_cart_list(request):
+    cart = CartItem.objects.filter(user=request.user).select_related("product", "store")
+    data = [
+        {
+            "id": ci.product.id,
+            "name": ci.product.name,
+            "price": float(ci.product.storeproduct_set.get(store=ci.store).price),
+            "store": ci.store.name,
+            "store_id": ci.store.id,
+            "quantity": ci.quantity,
+            "stock": ci.product.storeproduct_set.get(store=ci.store).stock,
+            "image": ci.product.image.url if ci.product.image else null,
+        }
+        for ci in cart
+    ]
+    return Response(data)
