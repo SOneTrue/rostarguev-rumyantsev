@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { fetchProducts } from "../api";
 import { useCart } from "../contexts/CartContext";
 
+const PAGE_SIZE_4 = 16; // 4 строки по 4 товара
+const PAGE_SIZE_5 = 15; // 3 строки по 5 товаров
+
 export default function HomePage() {
   const [products, setProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
@@ -12,9 +15,13 @@ export default function HomePage() {
   const [category, setCategory] = useState("");
   const [store, setStore] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [view, setView] = useState("4"); // "4" или "5"
+  const pageSize = view === "5" ? PAGE_SIZE_5 : PAGE_SIZE_4;
 
   const { items, add, remove } = useCart();
 
+  // Загрузка товаров
   useEffect(() => {
     async function loadAll() {
       try {
@@ -38,6 +45,7 @@ export default function HomePage() {
     loadAll();
   }, []);
 
+  // Фильтрация и поиск
   useEffect(() => {
     let filtered = allProducts;
     if (category)
@@ -49,7 +57,12 @@ export default function HomePage() {
         p.name.toLowerCase().includes(search.toLowerCase())
       );
     setProducts(filtered);
+    setPage(1); // сбрасываем страницу при смене фильтров/поиска
   }, [category, store, search, allProducts]);
+
+  // Пагинация
+  const totalPages = Math.ceil(products.length / pageSize);
+  const pagedProducts = products.slice((page - 1) * pageSize, page * pageSize);
 
   if (loading) return <div className="text-center py-12">Загрузка...</div>;
   if (error) return <div className="text-center text-red-600 py-12">{error}</div>;
@@ -87,79 +100,145 @@ export default function HomePage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
+        {/* Переключение вида (4 или 5 в строке) */}
+        <select
+          className="border rounded px-3 py-2"
+          value={view}
+          onChange={e => setView(e.target.value)}
+          style={{ minWidth: 130 }}
+        >
+          <option value="4">4 в строке</option>
+          <option value="5">5 в строке</option>
+        </select>
       </div>
 
       {/* --- Сетка товаров --- */}
       {products.length === 0 ? (
         <p className="text-gray-500">Товары не найдены.</p>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {products.map((p) => {
-            // Сортируем цены по возрастанию (самый дешевый магазин первым)
-            const sortedPrices = [...p.prices].sort((a, b) => a.price - b.price);
-            const minPrice = sortedPrices.length > 0 ? sortedPrices[0].price : null;
-            const inCart = items.some(i => i.id === p.id);
+        <>
+          <div
+            className={
+              view === "5"
+                ? "grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
+                : "grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+            }
+          >
+            {pagedProducts.map((p) => {
+              // Сортируем цены по возрастанию (самый дешевый магазин первым)
+              const sortedPrices = [...p.prices].sort((a, b) => a.price - b.price);
+              const minPrice = sortedPrices.length > 0 ? sortedPrices[0].price : null;
+              const inCart = items.some(i => i.id === p.id);
 
-            return (
-              <div key={p.id} className="bg-white rounded-2xl shadow p-4 flex flex-col">
-                {p.image && (
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    className="h-40 w-full object-cover mb-4 rounded-xl"
-                  />
-                )}
-                <h2 className="font-semibold mb-2">{p.name}</h2>
-                <div className="text-sm mb-4 space-y-1">
-                  {sortedPrices.map((sp, idx) => (
-                    <div key={idx} className="flex justify-between">
-                      <span className="text-gray-600">{sp.store.name}:</span>
-                      {sp.price > minPrice ? (
-                        <span className="line-through text-red-500 font-medium">{sp.price} ₽</span>
-                      ) : (
-                        <span className="font-bold">{sp.price} ₽</span>
-                      )}
-                    </div>
-                  ))}
+              return (
+                <div key={p.id} className="bg-white rounded-2xl shadow p-4 flex flex-col">
+                  {p.image && (
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      className="h-40 w-full object-cover mb-4 rounded-xl"
+                    />
+                  )}
+                  <h2 className="font-semibold mb-2">{p.name}</h2>
+                  <div className="text-sm mb-4 space-y-1">
+                    {sortedPrices.map((sp, idx) => (
+                      <div key={idx} className="flex justify-between">
+                        <span className="text-gray-600">{sp.store.name}:</span>
+                        {sp.price > minPrice ? (
+                          <span className="line-through text-red-500 font-medium">{sp.price} ₽</span>
+                        ) : (
+                          <span className="font-bold">{sp.price} ₽</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {inCart ? (
+                    <button
+                      onClick={() => {
+                        // Удалить именно тот товар и магазин
+                        const itemInCart = items.find(
+                          i => i.id === p.id && i.store_id === sortedPrices[0].store.id
+                        );
+                        if (itemInCart) {
+                          remove(itemInCart.id, itemInCart.store_id);
+                        }
+                      }}
+                      className="mt-auto py-2 rounded text-sm font-medium transition bg-red-600 text-white hover:bg-red-700"
+                    >
+                      Удалить из корзины
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        if (!inCart && sortedPrices.length > 0) {
+                          add({
+                            id: p.id,
+                            name: p.name,
+                            price: sortedPrices[0].price,
+                            store: sortedPrices[0].store.name,
+                            store_id: sortedPrices[0].store.id,
+                            quantity: 1,
+                            image: p.image,
+                            stock: sortedPrices[0]?.stock,
+                          });
+                        }
+                      }}
+                      className="mt-auto py-2 rounded text-sm font-medium transition bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      В корзину
+                    </button>
+                  )}
                 </div>
-                {inCart ? (
+              );
+            })}
+          </div>
+
+          {/* --- Пагинация --- */}
+          {totalPages > 1 && (
+            <div className="flex justify-center gap-2 mt-8">
+              <button
+                className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200"
+                onClick={() => setPage(1)}
+                disabled={page === 1}
+              >
+                «
+              </button>
+              <button
+                className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                ←
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => (
                 <button
-                  onClick={() => {
-                    // Находим этот товар из корзины по id и store_id (у тебя в корзине есть оба)
-                    const itemInCart = items.find(i => i.id === p.id && i.store_id === sortedPrices[0].store.id);
-                    if (itemInCart) {
-                      remove(itemInCart.id, itemInCart.store_id);
-                    }
-                  }}
-                  className="mt-auto py-2 rounded text-sm font-medium transition bg-red-600 text-white hover:bg-red-700"
+                  key={i + 1}
+                  className={`px-3 py-1 rounded ${page === i + 1
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 hover:bg-gray-200"
+                    }`}
+                  onClick={() => setPage(i + 1)}
                 >
-                  Удалить из корзины
+                  {i + 1}
                 </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    if (!inCart && sortedPrices.length > 0) {
-                      add({
-                        id: p.id,
-                        name: p.name,
-                        price: sortedPrices[0].price,
-                        store: sortedPrices[0].store.name,
-                        store_id: sortedPrices[0].store.id,
-                        quantity: 1,
-                        image: p.image,
-                        stock: p.prices[0]?.stock,   // <-- вот это важно!
-                      });
-                    }
-                  }}
-                  className="mt-auto py-2 rounded text-sm font-medium transition bg-blue-600 text-white hover:bg-blue-700"
-                >
-                  В корзину
-                </button>
-              )}
-              </div>
-            );
-          })}
-        </div>
+              ))}
+              <button
+                className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                →
+              </button>
+              <button
+                className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200"
+                onClick={() => setPage(totalPages)}
+                disabled={page === totalPages}
+              >
+                »
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
