@@ -29,9 +29,7 @@ export default function OrderDetailPage() {
   async function markDelivered() {
     setUpdating(true);
     try {
-      // Сначала ставим статус "Доставляется"
       await api.patch(`/orders/${orderId}/`, { status: 'delivering' });
-      // Потом (например, через 1.5 секунды) — "Доставлен"
       setTimeout(async () => {
         await api.patch(`/orders/${orderId}/`, { status: 'delivered' });
         await loadOrder();
@@ -43,7 +41,7 @@ export default function OrderDetailPage() {
     }
   }
 
-  // --- Скачать чек в PDF (работает только если бекенд отдаёт PDF по этому URL) ---
+  // Скачать PDF чек
   function downloadPDFReceipt() {
     fetch(`/api/orders/${orderId}/receipt/`, {
       headers: {
@@ -64,6 +62,32 @@ export default function OrderDetailPage() {
         document.body.removeChild(a);
       })
       .catch(() => alert("Ошибка при скачивании PDF чека"));
+  }
+
+  // Открыть чек в новой вкладке и сразу вызвать печать
+  function printPDFReceipt() {
+    fetch(`/api/orders/${orderId}/receipt/`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('access')}`,
+      }
+    })
+      .then(response => {
+        if (!response.ok) throw new Error("Ошибка печати PDF");
+        return response.blob();
+      })
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const printWindow = window.open(url, "_blank");
+        if (printWindow) {
+          printWindow.onload = () => {
+            printWindow.focus();
+            printWindow.print();
+          };
+        } else {
+          alert("Окно печати было заблокировано браузером.");
+        }
+      })
+      .catch(() => alert("Ошибка при печати PDF чека"));
   }
 
   if (loading) return <div className="text-center py-12">Загрузка...</div>;
@@ -117,7 +141,7 @@ export default function OrderDetailPage() {
             </tbody>
           </table>
         </div>
-        <div className="flex justify-center space-x-4 mt-8">
+        <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8">
           <button
             onClick={() => navigate('/account')}
             className="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700"
@@ -125,12 +149,20 @@ export default function OrderDetailPage() {
             Назад к профилю
           </button>
           {order.status === "delivered" ? (
-            <button
-              onClick={downloadPDFReceipt}
-              className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
-            >
-              Скачать чек (PDF)
-            </button>
+            <>
+              <button
+                onClick={downloadPDFReceipt}
+                className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+              >
+                Скачать чек (PDF)
+              </button>
+              <button
+                onClick={printPDFReceipt}
+                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+              >
+                Печать чека
+              </button>
+            </>
           ) : (
             <button
               onClick={markDelivered}
