@@ -1,4 +1,12 @@
+import os
+
+from django.conf import settings
+from django.http import HttpResponse
 from django.http import JsonResponse
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework.decorators import api_view, permission_classes
@@ -143,7 +151,7 @@ def api_orders(request):
     brief = [
         {
             "id": o["id"],
-            "created_at": o["created_at"],   # поле с датой создания
+            "created_at": o["created_at"],  # поле с датой создания
             "total": o["total"],
             "status": o.get("status", "-"),  # актуальный статус
         }
@@ -208,3 +216,51 @@ def api_order_detail(request, pk):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+from django.conf import settings
+from django.http import HttpResponse
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
+import os
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_order_receipt_pdf(request, pk):
+    try:
+        order = Order.objects.get(pk=pk, user=request.user)
+    except Order.DoesNotExist:
+        return HttpResponse('Заказ не найден', status=404)
+
+    font_path = os.path.join(settings.BASE_DIR, 'static', 'fonts', 'DejaVuSans.ttf')
+    if not os.path.exists(font_path):
+        return HttpResponse(f'Файл шрифта не найден: {font_path}', status=500)
+    pdfmetrics.registerFont(TTFont('DejaVuSans', font_path))
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="order_{order.id}_receipt.pdf"'
+
+    p = canvas.Canvas(response, pagesize=A4)
+    p.setFont("DejaVuSans", 16)
+    p.drawString(50, 800, f"Чек заказа №{order.id}")
+    p.setFont("DejaVuSans", 12)
+    p.drawString(50, 780, f"Дата: {order.created_at.strftime('%d.%m.%Y %H:%M')}")
+    y = 750
+    p.drawString(50, y, "Товар")
+    p.drawString(250, y, "Цена")
+    p.drawString(350, y, "Кол-во")
+    p.drawString(430, y, "Сумма")
+    y -= 20
+    for item in order.items.all():
+        p.drawString(50, y, str(item.product.name))
+        p.drawString(250, y, f"{item.price} ₽")
+        p.drawString(350, y, str(item.quantity))
+        p.drawString(430, y, f"{item.price * item.quantity} ₽")
+        y -= 20
+    p.setFont("DejaVuSans", 14)
+    p.drawString(50, y - 10, f"Итого: {order.total} ₽")
+    p.showPage()
+    p.save()
+    return response

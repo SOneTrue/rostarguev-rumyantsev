@@ -2,17 +2,17 @@ import { useCart } from '../contexts/CartContext';
 import { useEffect, useState } from 'react';
 
 export default function ProductCard({ product }) {
-  const { items, add } = useCart();
+  const { items, add, error, setError } = useCart();
   const [inCart, setInCart] = useState(false);
 
-  // Проверка: есть ли товар уже в корзине
   useEffect(() => {
     const found = items.find((i) => i.id === product.id);
     setInCart(!!found);
   }, [items, product.id]);
 
-  // Добавляем товар с минимальной ценой и магазином
+  // Добавляем товар с минимальной ценой, магазином и остатком
   const handleAdd = () => {
+    setError('');
     const sortedPrices = [...product.prices].sort((a, b) => a.price - b.price);
     const cheapest = sortedPrices[0];
 
@@ -21,12 +21,13 @@ export default function ProductCard({ product }) {
       name: product.name,
       price: cheapest.price,
       store: cheapest.store?.name ?? '-',
+      store_id: cheapest.store?.id ?? cheapest.store,
+      stock: cheapest.stock ?? 99, // Передай сюда stock, если есть!
     });
 
     setInCart(true);
   };
 
-  // Найдём минимальную цену для отображения (для подсветки)
   const minPrice = Math.min(...product.prices.map((p) => Number(p.price)));
 
   return (
@@ -49,10 +50,19 @@ export default function ProductCard({ product }) {
                 }`}
               >
                 {p.price} ₽
+                {p.stock !== undefined && (
+                  <span className="text-xs text-gray-500 ml-2">
+                    (в наличии: {p.stock})
+                  </span>
+                )}
               </span>
             </div>
           ))}
         </div>
+
+        {error && (
+          <div className="mb-2 text-red-600 text-sm">{error}</div>
+        )}
 
         <button
           onClick={handleAdd}

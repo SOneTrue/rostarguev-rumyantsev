@@ -1,5 +1,7 @@
 from django.urls import path
+
 from . import views
+from .views import api_order_receipt_pdf
 
 urlpatterns = [
     path("products/", views.api_product_list, name="api_product_list"),
@@ -10,4 +12,5 @@ urlpatterns = [
     path("orders/", views.api_orders, name="api_orders"),
     path("orders/<int:pk>/", views.api_order_detail, name="api_order_detail"),  # ← добавь эту строку
     path("cart/add/", views.api_cart_add, name="api_cart_add"),
+    path('orders/<int:pk>/receipt/', api_order_receipt_pdf, name='api_order_receipt_pdf'),
 ]

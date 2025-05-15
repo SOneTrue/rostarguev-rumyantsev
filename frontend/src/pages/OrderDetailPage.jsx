@@ -43,41 +43,27 @@ export default function OrderDetailPage() {
     }
   }
 
-  function downloadReceipt() {
-    const html = `
-      <html>
-        <head><meta charset="utf-8"><title>Чек заказа #${order.id}</title></head>
-        <body>
-          <h2>Чек заказа #${order.id}</h2>
-          <p><strong>Дата:</strong> ${new Date(order.created_at).toLocaleDateString()}</p>
-          <table border="1" cellpadding="5" cellspacing="0">
-            <thead>
-              <tr>
-                <th>Товар</th><th>Цена</th><th>Количество</th><th>Сумма</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${order.items.map(item => `
-                <tr>
-                  <td>${item.product.name}</td>
-                  <td>${item.price} ₽</td>
-                  <td>${item.quantity}</td>
-                  <td>${item.price * item.quantity} ₽</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          <p><strong>Итого:</strong> ${order.total} ₽</p>
-        </body>
-      </html>
-    `;
-    const blob = new Blob([html], { type: 'text/html' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `order_${order.id}_receipt.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // --- Скачать чек в PDF (работает только если бекенд отдаёт PDF по этому URL) ---
+  function downloadPDFReceipt() {
+    fetch(`/api/orders/${orderId}/receipt/`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('access')}`,
+      }
+    })
+      .then(response => {
+        if (!response.ok) throw new Error("Ошибка скачивания PDF");
+        return response.blob();
+      })
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `order_${orderId}_receipt.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      })
+      .catch(() => alert("Ошибка при скачивании PDF чека"));
   }
 
   if (loading) return <div className="text-center py-12">Загрузка...</div>;
@@ -139,20 +125,12 @@ export default function OrderDetailPage() {
             Назад к профилю
           </button>
           {order.status === "delivered" ? (
-            <>
-              <button
-                onClick={() => window.print()}
-                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-              >
-                Распечатать
-              </button>
-              <button
-                onClick={downloadReceipt}
-                className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
-              >
-                Скачать чек
-              </button>
-            </>
+            <button
+              onClick={downloadPDFReceipt}
+              className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+            >
+              Скачать чек (PDF)
+            </button>
           ) : (
             <button
               onClick={markDelivered}

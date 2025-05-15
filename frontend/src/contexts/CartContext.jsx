@@ -1,52 +1,71 @@
-import React, { createContext, useContext, useState } from 'react';
-import { api } from '../api';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const CartContext = createContext();
 
+function getSavedCart() {
+  try {
+    return JSON.parse(localStorage.getItem('cart-items') || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveCart(items) {
+  localStorage.setItem('cart-items', JSON.stringify(items));
+}
+
 export const CartProvider = ({ children }) => {
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(getSavedCart());
+  const [error, setError] = useState('');
 
-  const add = async (p) => {
-    let store_id = p.store_id || (p.prices?.[0]?.store?.id);
-    let price = parseFloat(p.price || p.prices?.[0]?.price);
-    let store_name = p.store || p.prices?.[0]?.store?.name;
+  // Сохраняем корзину при любом изменении
+  useEffect(() => {
+    saveCart(items);
+  }, [items]);
 
-    if (!store_id || !price) {
-      console.warn("⛔ У товара нет цен, нельзя добавить в корзину:", p);
-      return;
+  // Добавить товар
+  const add = (p) => {
+    setError('');
+    // Проверим, сколько уже есть
+    const index = items.findIndex((i) => i.id === p.id && i.store_id === p.store_id);
+    const stock = Number(p.stock ?? 99); // если нет stock, пусть будет 99
+    let newItems = [...items];
+
+    if (index >= 0) {
+      const currQty = newItems[index].quantity;
+      if (currQty + 1 > stock) {
+        setError('Нельзя добавить больше — такого количества товара нет в наличии.');
+        return;
+      }
+      newItems[index] = { ...newItems[index], quantity: currQty + 1 };
+    } else {
+      if (stock < 1) {
+        setError('Товара нет в наличии.');
+        return;
+      }
+      newItems.push({ ...p, quantity: 1 });
     }
 
-    try {
-      await api.post("/cart/add/", {
-        product: p.id,
-        store: store_id,
-        quantity: 1,
-      });
-
-      setItems((prev) => [
-        ...prev,
-        {
-          id: p.id,
-          name: p.name,
-          price,
-          store: store_name,
-          store_id,
-          quantity: 1,
-        },
-      ]);
-    } catch (e) {
-      console.error("Ошибка добавления в корзину:", e);
-    }
+    setItems(newItems);
   };
 
-  const updateQty = (id, q) => {
+  // Обновить количество
+  const updateQty = (id, store_id, qty, maxStock) => {
+    setError('');
+    let q = Math.max(1, Number(qty) || 1);
+    if (q > maxStock) {
+      setError(`Доступно только ${maxStock} шт. этого товара`);
+      q = maxStock;
+    }
     setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, quantity: q } : i))
+      prev.map((i) =>
+        i.id === id && i.store_id === store_id ? { ...i, quantity: q } : i
+      )
     );
   };
 
-  const remove = (id) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+  const remove = (id, store_id) => {
+    setItems((prev) => prev.filter((i) => !(i.id === id && i.store_id === store_id)));
   };
 
   const clear = () => setItems([]);
@@ -54,7 +73,18 @@ export const CartProvider = ({ children }) => {
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ items, add, updateQty, remove, clear, total }}>
+    <CartContext.Provider
+      value={{
+        items,
+        add,
+        updateQty,
+        remove,
+        clear,
+        total,
+        error,
+        setError,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

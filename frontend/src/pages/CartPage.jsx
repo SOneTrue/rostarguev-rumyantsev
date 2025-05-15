@@ -1,17 +1,13 @@
-// src/pages/CartPage.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../contexts/CartContext";
-import { checkout } from "../api";           // <- NEW: POST /api/checkout/
+import { checkout } from "../api";
 
 export default function CartPage() {
-  const { items, updateQty, remove, clear, total } = useCart();
-  const navigate  = useNavigate();
-
+  const { items, updateQty, remove, clear, total, error, setError } = useCart();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState("");
 
-  /* пустая корзина */
   if (!items.length)
     return (
       <div className="container mx-auto px-4 py-12 text-center">
@@ -19,14 +15,13 @@ export default function CartPage() {
       </div>
     );
 
-  /* оформление заказа */
   async function handleCheckout() {
     setError("");
     setLoading(true);
     try {
-      await checkout();       // POST /api/checkout/
-      clear();                // очищаем локальную корзину
-      navigate("/account");   // в личный кабинет
+      await checkout();
+      clear();
+      navigate("/account");
     } catch (e) {
       setError("Не удалось оформить заказ. Попробуйте позже.");
     } finally {
@@ -58,7 +53,7 @@ export default function CartPage() {
             </thead>
             <tbody>
               {items.map((it) => (
-                <tr key={it.id} className="border-t text-sm">
+                <tr key={it.id + '-' + it.store_id} className="border-t text-sm">
                   <td className="p-3 font-medium">{it.name}</td>
                   <td className="p-3">{it.store ?? "-"}</td>
                   <td className="p-3 text-right">{it.price} ₽</td>
@@ -67,18 +62,24 @@ export default function CartPage() {
                       type="number"
                       min="1"
                       value={it.quantity}
+                      max={it.stock ?? 99}
                       onChange={(e) =>
-                        updateQty(it.id, Number(e.target.value) || 1)
+                        updateQty(it.id, it.store_id, Number(e.target.value) || 1, it.stock ?? 99)
                       }
                       className="w-16 border rounded text-center"
                     />
+                    {it.stock !== undefined && (
+                      <div className="text-xs text-gray-400">
+                        в наличии: {it.stock}
+                      </div>
+                    )}
                   </td>
                   <td className="p-3 text-right font-semibold">
                     {it.price * it.quantity} ₽
                   </td>
                   <td className="p-3 text-center">
                     <button
-                      onClick={() => remove(it.id)}
+                      onClick={() => remove(it.id, it.store_id)}
                       className="text-red-600 hover:underline"
                     >
                       Удалить
