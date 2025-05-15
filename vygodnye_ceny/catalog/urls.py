@@ -13,5 +13,5 @@ urlpatterns = [
     path("cart/add/", views.api_cart_add, name="api_cart_add"),
     path('orders/<int:pk>/receipt/', api_order_receipt_pdf, name='api_order_receipt_pdf'),
     path("cart/", views.api_cart_list, name="api_cart_list"),
-    path("products/", views.api_product_list, name="api_product_list"),  # ← ВЕРНИ ЭТО
+    path("products/", views.api_product_list, name="api_product_list"),
 ]

@@ -162,8 +162,17 @@ def api_cart_add(request):
     if not sp:
         return Response({"error": "Нет цены для этого товара в магазине"}, status=400)
 
+    # ⬇️ НОВОЕ: если quantity <= 0 — УДАЛЯЕМ товар из корзины!
+    if quantity <= 0:
+        CartItem.objects.filter(
+            user=request.user,
+            product_id=product_id,
+            store_id=store_id
+        ).delete()
+        return Response({"success": True, "removed": True})
+
     if quantity > sp.stock:
-        quantity = sp.stock  # просто обрежь на максимум
+        quantity = sp.stock
 
     item, created = CartItem.objects.get_or_create(
         user=request.user,
@@ -275,3 +284,5 @@ def api_cart_list(request):
         for ci in cart
     ]
     return Response(data)
+
+

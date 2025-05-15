@@ -12,7 +12,7 @@ function setTokens({ access, refresh }) {
 /*────────────────────  СОЗДАЁМ БАЗОВЫЕ ИНСТАНСЫ  ────────────────────*/
 export const api = axios.create({
   baseURL: "http://localhost:8000/api",
-  withCredentials: true,            // нужны куки CSRF
+  withCredentials: true,
   xsrfCookieName: "csrftoken",
   xsrfHeaderName: "X-CSRFToken",
 });
@@ -30,7 +30,7 @@ function attachToken(config) {
   if (t) config.headers.Authorization = `Bearer ${t}`;
   return config;
 }
-api .interceptors.request.use(attachToken);
+api.interceptors.request.use(attachToken);
 authApi.interceptors.request.use(attachToken);
 
 /*────────────────────  АВТО‑REFRESH  ────────────────────*/
@@ -38,8 +38,14 @@ let refreshing = false;
 let queue = [];
 
 async function refreshToken() {
+  if (!getRefresh()) {
+    // Нет refresh токена, просто на login и всё!
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
+    window.location.href = "/login";
+    return;
+  }
   if (refreshing) {
-    // если уже идёт refresh — ждём его
     return new Promise((res) => queue.push(res));
   }
   refreshing = true;
@@ -50,10 +56,10 @@ async function refreshToken() {
     setTokens({ access: data.access });
     queue.forEach((cb) => cb());
   } catch {
-    // refresh не сработал → вылогиниваем
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
     window.location.href = "/login";
+    // window.location.reload(); // (не обязательно, но можно для сброса state)
   } finally {
     refreshing = false;
     queue = [];
@@ -65,10 +71,19 @@ api.interceptors.response.use(
   (r) => r,
   async (error) => {
     const cfg = error.config;
-    if (error.response?.status === 401 && !cfg.__isRetry) {
+    // Проверяем: если неавторизован И ещё не пробовали обновить токен
+    if (
+      error.response?.status === 401 &&
+      !cfg.__isRetry &&
+      getRefresh()
+    ) {
       cfg.__isRetry = true;
       await refreshToken();
-      return api(cfg);           // повторяем оригинальный запрос
+      // После refresh — если access появился, повторяем запрос
+      if (getAccess()) {
+        return api(cfg);
+      }
+      // Если всё равно нет токена — просто отклоняем ошибку
     }
     return Promise.reject(error);
   }
