@@ -1,22 +1,15 @@
 import { useState } from "react";
 
-// Функция форматирования телефона: +7 (XXX) XXX-XX-XX
 function formatPhone(input) {
   let cleaned = input.replace(/\D/g, "");
-
-  // Преобразуем "8..." или "7..." в "+7..."
   if (cleaned.startsWith("8")) cleaned = "7" + cleaned.slice(1);
   if (!cleaned.startsWith("7")) cleaned = "7" + cleaned.slice(cleaned[0] === "7" ? 1 : 0);
-
-  // Обрезаем до 11 символов
   cleaned = cleaned.slice(0, 11);
-
   let result = "+7";
   if (cleaned.length > 1) result += " (" + cleaned.slice(1, 4);
   if (cleaned.length >= 4) result += ") " + cleaned.slice(4, 7);
   if (cleaned.length >= 7) result += "-" + cleaned.slice(7, 9);
   if (cleaned.length >= 9) result += "-" + cleaned.slice(9, 11);
-
   return result;
 }
 
@@ -25,7 +18,6 @@ function validateFullName(value) {
   if (value.trim().length < 3) return "Слишком короткое ФИО";
   return "";
 }
-
 function validatePhone(value) {
   const cleaned = value.replace(/\D/g, "");
   if (!cleaned) return "Введите номер телефона";
@@ -33,10 +25,13 @@ function validatePhone(value) {
   if (!/^7\d{10}$/.test(cleaned)) return "Введите номер в формате +7...";
   return "";
 }
-
 function validateAddress(value) {
   if (!value.trim()) return "Введите адрес доставки";
   if (value.trim().length < 5) return "Адрес слишком короткий";
+  return "";
+}
+function validatePaymentMethod(value) {
+  if (!value) return "Выберите способ оплаты";
   return "";
 }
 
@@ -44,7 +39,8 @@ export default function CheckoutModal({ open, onClose, onSubmit, loading }) {
   const [fields, setFields] = useState({
     full_name: "",
     phone: "",
-    address: ""
+    address: "",
+    payment_method: "", // новое поле
   });
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState("");
@@ -53,39 +49,37 @@ export default function CheckoutModal({ open, onClose, onSubmit, loading }) {
 
   const handleChange = (e) => {
     let { name, value } = e.target;
-    // Форматируем телефон
-    if (name === "phone") {
-      value = formatPhone(value);
-    }
+    if (name === "phone") value = formatPhone(value);
     setFields({ ...fields, [name]: value });
 
-    // Валидация на лету
+    // Валидируем только текущее поле
     let err = "";
-    if (name === "full_name") err = validateFullName(value);
-    if (name === "phone")     err = validatePhone(value);
-    if (name === "address")   err = validateAddress(value);
+    if (name === "full_name")      err = validateFullName(value);
+    if (name === "phone")          err = validatePhone(value);
+    if (name === "address")        err = validateAddress(value);
+    if (name === "payment_method") err = validatePaymentMethod(value);
     setErrors((prev) => ({ ...prev, [name]: err }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError("");
-
-    const fullNameError = validateFullName(fields.full_name);
-    const phoneError    = validatePhone(fields.phone);
-    const addressError  = validateAddress(fields.address);
+    const fullNameError      = validateFullName(fields.full_name);
+    const phoneError         = validatePhone(fields.phone);
+    const addressError       = validateAddress(fields.address);
+    const paymentMethodError = validatePaymentMethod(fields.payment_method);
 
     setErrors({
       full_name: fullNameError,
       phone: phoneError,
       address: addressError,
+      payment_method: paymentMethodError,
     });
 
-    if (fullNameError || phoneError || addressError) {
+    if (fullNameError || phoneError || addressError || paymentMethodError) {
       setFormError("Проверьте правильность заполнения полей");
       return;
     }
-
     try {
       await onSubmit(fields);
     } catch (e) {
@@ -140,6 +134,22 @@ export default function CheckoutModal({ open, onClose, onSubmit, loading }) {
               disabled={loading}
             />
             {errors.address && <div className="text-xs text-red-500 mt-1">{errors.address}</div>}
+          </div>
+          <div>
+            <select
+              name="payment_method"
+              className={`border rounded px-3 py-2 w-full ${errors.payment_method ? "border-red-400" : ""}`}
+              value={fields.payment_method}
+              onChange={handleChange}
+              disabled={loading}
+            >
+              <option value="">Выберите способ оплаты</option>
+              <option value="card">Картой при получении</option>
+              <option value="cash">Наличными</option>
+            </select>
+            {errors.payment_method && (
+              <div className="text-xs text-red-500 mt-1">{errors.payment_method}</div>
+            )}
           </div>
           <button
             type="submit"

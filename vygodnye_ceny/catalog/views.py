@@ -125,6 +125,7 @@ def api_checkout(request):
     full_name = request.data.get('full_name', '')
     phone = request.data.get('phone', '')
     address = request.data.get('address', '')
+    payment_method = request.data.get('payment_method', 'card')
 
     order = Order.objects.create(
         user=request.user,
@@ -133,6 +134,8 @@ def api_checkout(request):
         full_name=full_name,
         phone=phone,
         address=address,
+        payment_method=payment_method,
+
     )
 
     for item in items:

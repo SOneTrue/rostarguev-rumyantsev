@@ -96,34 +96,55 @@ export default function OrderDetailPage() {
   // Рендер статуса
   const statusInfo = {
     delivering: { label: 'Доставляется', className: "bg-yellow-100 text-yellow-800" },
-    delivered: { label: 'Доставлен', className: "bg-green-100 text-green-800" },
+    delivered: { label: 'Завершен', className: "bg-green-100 text-green-800" },
     pending: { label: 'В обработке', className: "bg-gray-100 text-gray-800" },
   };
   const currentStatus = statusInfo[order.status] || { label: order.status, className: "" };
 
   return (
-    <main className="container mx-auto px-4 py-8 max-w-2xl">
+    <main className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="bg-white rounded-2xl shadow-lg p-8">
         <h2 className="text-2xl font-bold mb-6 text-center">Детали заказа #{order.id}</h2>
-        <div className="mb-4 flex flex-col md:flex-row md:justify-between gap-2">
+        {/* Информация о заказе и доставка */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-4">
           <div>
-            <span className="block"><strong>Дата:</strong> {order.created_at ? new Date(order.created_at).toLocaleDateString() : "-"}</span>
-            <span className="block mt-1">
+            <div className="font-bold mb-2">Информация о заказе</div>
+            <div className="mb-1"><strong>Дата:</strong> {order.created_at ? new Date(order.created_at).toLocaleDateString() : "-"}</div>
+            <div className="mb-1">
               <strong>Статус:</strong>
               <span className={`ml-2 inline-block px-2 py-1 rounded ${currentStatus.className}`}>
                 {currentStatus.label}
               </span>
-            </span>
+            </div>
+            <div className="mb-1">
+              <strong>Телефон:</strong> {order.phone || "-"}
+            </div>
           </div>
-          <div className="flex md:items-end justify-start md:justify-end mt-2 md:mt-0">
-            <span className="text-lg font-bold">Итого: {order.total} ₽</span>
+          <div>
+            <div className="font-bold mb-2">Доставка</div>
+            <div className="mb-1">
+              <strong>ФИО:</strong> {order.full_name || "-"}
+            </div>
+            <div className="mb-1">
+              <strong>Способ оплаты:</strong>{" "}
+              {order.payment_method === "card"
+                ? "Картой при получении"
+                : order.payment_method === "cash"
+                ? "Наличными"
+                : "-"}
+            </div>
+            <div className="mb-1">
+              <strong>Адрес:</strong> {order.address || "-"}
+            </div>
           </div>
         </div>
+        {/* Таблица товаров */}
         <div className="overflow-x-auto rounded-xl border">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left">Товар</th>
+                {/* <th className="px-4 py-3 text-left">Магазин</th> */}
                 <th className="px-4 py-3 text-right">Цена</th>
                 <th className="px-4 py-3 text-center">Количество</th>
                 <th className="px-4 py-3 text-right">Сумма</th>
@@ -133,6 +154,7 @@ export default function OrderDetailPage() {
               {order.items.map((item) => (
                 <tr key={item.id}>
                   <td className="px-4 py-3">{item.product.name}</td>
+                  {/* <td className="px-4 py-3">{item.store_name}</td> */}
                   <td className="px-4 py-3 text-right">{item.price} ₽</td>
                   <td className="px-4 py-3 text-center">{item.quantity}</td>
                   <td className="px-4 py-3 text-right">{item.price * item.quantity} ₽</td>
@@ -141,6 +163,7 @@ export default function OrderDetailPage() {
             </tbody>
           </table>
         </div>
+        {/* Итоги */}
         <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8">
           <button
             onClick={() => navigate('/account')}

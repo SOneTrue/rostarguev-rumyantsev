@@ -97,7 +97,17 @@ class Order(models.Model):
     full_name   = models.CharField("ФИО", max_length=150, blank=True)
     phone       = models.CharField("Телефон", max_length=32, blank=True)
     address     = models.CharField("Адрес доставки", max_length=255, blank=True)
-
+    PAYMENT_CHOICES = [
+        ('card', 'Картой при получении'),
+        ('cash', 'Наличными'),
+    ]
+    payment_method = models.CharField(
+        "Способ оплаты",
+        max_length=10,
+        choices=PAYMENT_CHOICES,
+        default='card',
+        blank=True,
+    )
     class Meta:
         verbose_name = "Заказ"
         verbose_name_plural = "Заказы"
