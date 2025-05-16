@@ -1,7 +1,7 @@
 # catalog/serializers.py
+
 from django.contrib.auth import get_user_model
 from djoser.serializers import UserCreateSerializer as Base
-from rest_framework import generics
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -9,26 +9,21 @@ from .models import (
     PriceSuggestion,
     Order,
     OrderItem,
+    Product,
 )
-from .models import Product
 
-
-# ───────────────────  JWT‑логин ПО EMAIL  ────────────────────
+# ─────────── JWT‑логин ПО EMAIL ───────────
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """Авторизация по email вместо username."""
-
     def validate(self, attrs):
         attrs["username"] = attrs.get("email")
         return super().validate(attrs)
 
-
-# ───────────────────  Регистрация  ────────────────────
+# ─────────── Регистрация ───────────
 User = get_user_model()
-
 
 class UserCreateSerializer(Base):
     """Djoser‑сериализатор регистрации (username = email)."""
-
     class Meta(Base.Meta):
         model = User
         fields = ("id", "email", "password")
@@ -37,8 +32,7 @@ class UserCreateSerializer(Base):
         validated_data["username"] = validated_data["email"]
         return super().create(validated_data)
 
-
-# ───────────────────  Предложение цены  ────────────────────
+# ─────────── Предложение цены ───────────
 class PriceSuggestionSerializer(serializers.ModelSerializer):
     product = serializers.CharField(source="product.name")
     store = serializers.CharField(source="store.name")
@@ -55,13 +49,12 @@ class PriceSuggestionSerializer(serializers.ModelSerializer):
             "sent_at",
         )
 
+# ─────────── Заказы ───────────
 
-# ───────────────────  Заказы  ────────────────────
 class ProductShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ('id', 'name')
-
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product = ProductShortSerializer()
@@ -70,41 +63,20 @@ class OrderItemSerializer(serializers.ModelSerializer):
         model = OrderItem
         fields = ['id', 'product', 'quantity', 'price']
 
-
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
-    status = serializers.CharField()  # Добавь это если нет
-
-    class Meta:
-        model = Order
-        fields = ['id', 'created_at', 'total', 'status', 'items']
-
-
-class OrderDetailAPIView(generics.RetrieveUpdateAPIView):
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
-    # Добавь пермишены если нужно (IsAuthenticated и т.д.)
-
-
-class OrderItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderItem
-        fields = ('product', 'quantity', 'price')
-
-
-class OrderSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True)
 
     class Meta:
         model = Order
         fields = [
-            'id', 'user', 'created_at', 'total', 'status',
+            'id', 'created_at', 'total', 'status',
             'full_name', 'phone', 'address', 'payment_method', 'items'
         ]
         read_only_fields = ('id', 'user', 'created_at', 'total', 'status')
 
+    # Если у тебя нужна поддержка создания заказа из сериализатора (например, через DRF ViewSet)
     def create(self, validated_data):
-        items_data = validated_data.pop('items')
+        items_data = validated_data.pop('items', [])
         order = Order.objects.create(**validated_data)
         for item_data in items_data:
             OrderItem.objects.create(order=order, **item_data)
