@@ -2,12 +2,45 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../contexts/CartContext";
 import { checkout } from "../api";
+import CheckoutModal from "../components/CheckoutModal";
 
 export default function CartPage() {
   const { items, updateQty, remove, clear, total, error, setError } = useCart();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [inputErrors, setInputErrors] = useState({}); // локальные ошибки для инпутов
+  const [inputErrors, setInputErrors] = useState({});
+  const [showModal, setShowModal] = useState(false);
+
+  // Для итоговой интеграции с API: сюда добавь новые поля!
+  async function handleCheckoutSubmit(fields) {
+    setError("");
+    setLoading(true);
+    try {
+      // Собери orderItems для API (если нужно)
+      const orderItems = items.map(it => ({
+        product: it.id,
+        quantity: it.quantity,
+        price: it.price
+      }));
+
+      // Отправь на backend вместе с полями из формы:
+      await checkout({
+        full_name: fields.full_name,
+        phone: fields.phone,
+        address: fields.address,
+        items: orderItems,
+      });
+
+      setShowModal(false);
+      clear();
+      navigate("/account");
+    } catch (e) {
+      setError("Не удалось оформить заказ. Попробуйте позже.");
+      throw e; // для вывода ошибки в модалке
+    } finally {
+      setLoading(false);
+    }
+  }
 
   if (!items.length)
     return (
@@ -16,21 +49,6 @@ export default function CartPage() {
       </div>
     );
 
-  async function handleCheckout() {
-    setError("");
-    setLoading(true);
-    try {
-      await checkout();
-      clear();
-      navigate("/account");
-    } catch (e) {
-      setError("Не удалось оформить заказ. Попробуйте позже.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Функция изменения количества с обработкой ошибок
   function handleChangeQty(it, val) {
     const qty = Math.max(1, Number(val) || 1);
     if (qty > (it.stock ?? 99)) {
@@ -54,7 +72,6 @@ export default function CartPage() {
       )}
 
       <div className="relative">
-        {/* таблица товаров */}
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white rounded shadow">
             <thead className="bg-gray-100 text-sm text-left">
@@ -120,7 +137,7 @@ export default function CartPage() {
               Итого: <span className="text-2xl">{total} ₽</span>
             </div>
             <button
-              onClick={handleCheckout}
+              onClick={() => setShowModal(true)}
               disabled={loading || Object.values(inputErrors).some(Boolean)}
               className={`w-full py-2 rounded transition ${
                 loading || Object.values(inputErrors).some(Boolean)
@@ -133,6 +150,14 @@ export default function CartPage() {
           </div>
         </div>
       </div>
+
+      {/* --- Модальное окно оформления заказа --- */}
+      <CheckoutModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        onSubmit={handleCheckoutSubmit}
+        loading={loading}
+      />
     </div>
   );
 }

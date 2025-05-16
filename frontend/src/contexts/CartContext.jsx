@@ -40,7 +40,15 @@ export const CartProvider = ({ children }) => {
       });
       await fetchCart();
     } catch (e) {
-      setError(e?.response?.data?.error || "Ошибка при добавлении товара");
+      if (e?.response?.status === 401) {
+        setError("Войдите в аккаунт, чтобы добавить товар в корзину!");
+        setLoading(false);
+        throw new Error("Войдите в аккаунт, чтобы добавить товар в корзину!");
+      } else {
+        setError(e?.response?.data?.error || "Ошибка при добавлении товара");
+        setLoading(false);
+        throw new Error(e?.response?.data?.error || "Ошибка при добавлении товара");
+      }
     }
     setLoading(false);
   }

@@ -39,7 +39,6 @@ let queue = [];
 
 async function refreshToken() {
   if (!getRefresh()) {
-    // Нет refresh токена, просто на login и всё!
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
     window.location.href = "/login";
@@ -59,19 +58,18 @@ async function refreshToken() {
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
     window.location.href = "/login";
-    // window.location.reload(); // (не обязательно, но можно для сброса state)
+    // window.location.reload(); // (по желанию)
   } finally {
     refreshing = false;
     queue = [];
   }
 }
 
-// перехватчик ошибок
+// Перехватчик ошибок для автоматического refresh токена
 api.interceptors.response.use(
   (r) => r,
   async (error) => {
     const cfg = error.config;
-    // Проверяем: если неавторизован И ещё не пробовали обновить токен
     if (
       error.response?.status === 401 &&
       !cfg.__isRetry &&
@@ -79,11 +77,9 @@ api.interceptors.response.use(
     ) {
       cfg.__isRetry = true;
       await refreshToken();
-      // После refresh — если access появился, повторяем запрос
       if (getAccess()) {
         return api(cfg);
       }
-      // Если всё равно нет токена — просто отклоняем ошибку
     }
     return Promise.reject(error);
   }
@@ -95,11 +91,11 @@ export const fetchProducts = async () => {
   const { data } = await api.get("/products/");
   return Array.isArray(data) ? data : [];
 };
-export const fetchStores          = ()   => api.get("/stores/");
-export const sendPriceSuggestion  = (d)  => api.post("/suggest-price/", d);
+export const fetchStores         = ()   => api.get("/stores/");
+export const sendPriceSuggestion = (d)  => api.post("/suggest-price/", d);
 
 /* auth (Djoser) */
-export const register = (d) => authApi.post("/auth/users/",        d);
+export const register = (d) => authApi.post("/auth/users/", d);
 export const login    = async (d) => {
   const { data } = await authApi.post("/auth/jwt/create/", d);
   setTokens(data);
@@ -107,6 +103,12 @@ export const login    = async (d) => {
 };
 export const getUser  = () => authApi.get("/auth/users/me/");
 
-export const checkout     = ()   => api.post("/checkout/");
-export const getMyOrders  = ()   => api.get("/orders/");
-export const getOrderOne  = id   => api.get(`/orders/?id=${id}`);
+/**
+ * Оформление заказа
+ * @param {object} data - { full_name, phone, address }
+ * @returns Promise
+ */
+export const checkout = (data) => api.post("/checkout/", data);
+
+export const getMyOrders = () => api.get("/orders/");
+export const getOrderOne = id  => api.get(`/orders/?id=${id}`);

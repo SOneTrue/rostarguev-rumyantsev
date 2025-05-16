@@ -84,18 +84,19 @@ class CartItem(models.Model):
         return f"{self.user} – {self.product} x{self.quantity}"
 
 class Order(models.Model):
-    user       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Пользователь")
-    created_at = models.DateTimeField("Дата создания", default=timezone.now, editable=False)
-    total      = models.DecimalField("Сумма заказа", max_digits=10, decimal_places=2)
+    user        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Пользователь")
+    created_at  = models.DateTimeField("Дата создания", default=timezone.now, editable=False)
+    total       = models.DecimalField("Сумма заказа", max_digits=10, decimal_places=2)
     STATUS_CHOICES = [
         ('pending', 'В обработке'),
         ('delivering', 'Доставляется'),
         ('delivered', 'Доставлен'),
     ]
-    status = models.CharField(
-        "Статус",
-        max_length=20, choices=STATUS_CHOICES, default='pending'
-    )
+    status      = models.CharField("Статус", max_length=20, choices=STATUS_CHOICES, default='pending')
+    # Новые поля:
+    full_name   = models.CharField("ФИО", max_length=150, blank=True)
+    phone       = models.CharField("Телефон", max_length=32, blank=True)
+    address     = models.CharField("Адрес доставки", max_length=255, blank=True)
 
     class Meta:
         verbose_name = "Заказ"

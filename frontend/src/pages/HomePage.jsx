@@ -18,6 +18,7 @@ export default function HomePage() {
   const [page, setPage] = useState(1);
   const [view, setView] = useState("4"); // "4" или "5"
   const pageSize = view === "5" ? PAGE_SIZE_5 : PAGE_SIZE_4;
+  const [cartError, setCartError] = useState("");
 
   const { items, add, remove } = useCart();
 
@@ -70,7 +71,9 @@ export default function HomePage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Все товары</h1>
-
+      {cartError && (
+        <div className="mb-4 text-center text-red-600">{cartError}</div>
+      )}
       {/* --- Фильтры --- */}
       <div className="flex flex-wrap gap-4 mb-6">
         <select
@@ -169,18 +172,23 @@ export default function HomePage() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        setCartError("");
                         if (!inCart && sortedPrices.length > 0) {
-                          add({
-                            id: p.id,
-                            name: p.name,
-                            price: sortedPrices[0].price,
-                            store: sortedPrices[0].store.name,
-                            store_id: sortedPrices[0].store.id,
-                            quantity: 1,
-                            image: p.image,
-                            stock: sortedPrices[0]?.stock,
-                          });
+                          try {
+                            await add({
+                              id: p.id,
+                              name: p.name,
+                              price: sortedPrices[0].price,
+                              store: sortedPrices[0].store.name,
+                              store_id: sortedPrices[0].store.id,
+                              quantity: 1,
+                              image: p.image,
+                              stock: sortedPrices[0]?.stock,
+                            });
+                          } catch (err) {
+                            setCartError(err.message || "Ошибка добавления в корзину");
+                          }
                         }
                       }}
                       className="mt-auto py-2 rounded text-sm font-medium transition bg-blue-600 text-white hover:bg-blue-700"

@@ -1,16 +1,5 @@
 from django import forms
-from .models import Feedback, PriceSuggestion, Product, Store
-
-
-class FeedbackForm(forms.ModelForm):
-    class Meta:
-        model  = Feedback
-        fields = ["name", "email", "message"]
-        widgets = {
-            "name":    forms.TextInput(attrs={"class": "border p-2 w-full", "placeholder": "Имя"}),
-            "email":   forms.EmailInput(attrs={"class": "border p-2 w-full", "placeholder": "E‑mail (необязательно)"}),
-            "message": forms.Textarea(attrs={"class": "border p-2 w-full h-32", "placeholder": "Сообщение"}),
-        }
+from .models import PriceSuggestion, Product, Store
 
 
 class PriceSuggestionForm(forms.ModelForm):

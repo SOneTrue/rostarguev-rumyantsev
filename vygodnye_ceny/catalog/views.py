@@ -1,4 +1,12 @@
+import os
+
+from django.conf import settings
+from django.http import HttpResponse
 from django.http import JsonResponse
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
 from rest_framework import status
 from rest_framework import viewsets
 from rest_framework.decorators import api_view, permission_classes
@@ -102,7 +110,7 @@ def api_checkout(request):
     for ci in cart:
         sp = StoreProduct.objects.filter(product=ci.product, store=ci.store).first()
         if not sp:
-            continue  # Пропускаем, если нет цены
+            continue
         total += sp.price * ci.quantity
         items.append(OrderItem(
             product=ci.product,
@@ -113,7 +121,20 @@ def api_checkout(request):
     if not items:
         return Response({"error": "Ни один товар не имеет цены"}, status=400)
 
-    order = Order.objects.create(user=request.user, total=total, status='pending')
+    # === ВАЖНО: сохраняем новые поля заказа! ===
+    full_name = request.data.get('full_name', '')
+    phone = request.data.get('phone', '')
+    address = request.data.get('address', '')
+
+    order = Order.objects.create(
+        user=request.user,
+        total=total,
+        status='pending',
+        full_name=full_name,
+        phone=phone,
+        address=address,
+    )
+
     for item in items:
         item.order = order
 
@@ -121,6 +142,7 @@ def api_checkout(request):
     cart.delete()
 
     return Response({"success": True, "order_id": order.id})
+
 
 
 # ───────────────────  ЗАКАЗЫ ────────────────────
@@ -217,15 +239,6 @@ def api_order_detail(request, pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-from django.conf import settings
-from django.http import HttpResponse
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfgen import canvas
-import os
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def api_order_receipt_pdf(request, pk):
@@ -284,5 +297,3 @@ def api_cart_list(request):
         for ci in cart
     ]
     return Response(data)
-
-
