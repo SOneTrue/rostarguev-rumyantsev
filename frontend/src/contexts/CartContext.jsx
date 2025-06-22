@@ -24,8 +24,6 @@ export const CartProvider = ({ children }) => {
 
   useEffect(() => {
     fetchCart();
-    // Если нужно: добавить реакцию на изменение авторизации (например, user)
-    // Можно подписаться на события AuthContext, если есть
   }, []);
 
   // Добавить товар
@@ -52,6 +50,8 @@ export const CartProvider = ({ children }) => {
     }
     setLoading(false);
   }
+
+
 
   // Изменить количество
   async function updateQty(id, store_id, qty, stock) {
@@ -87,7 +87,6 @@ export const CartProvider = ({ children }) => {
     setLoading(false);
   }
 
-  // Очистить корзину (на сервере должен быть endpoint /cart/clear/)
   async function clear() {
     setError("");
     setLoading(true);

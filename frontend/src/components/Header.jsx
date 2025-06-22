@@ -7,7 +7,7 @@ export default function Header() {
 
   const logout = () => {
     localStorage.removeItem('access');
-    loadUser();          // сброс контекста
+    loadUser();
     nav('/login');
   };
 

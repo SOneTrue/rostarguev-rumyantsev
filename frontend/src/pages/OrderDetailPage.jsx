@@ -23,7 +23,6 @@ export default function OrderDetailPage() {
 
   useEffect(() => {
     loadOrder();
-    // eslint-disable-next-line
   }, [orderId]);
 
   async function markDelivered() {
@@ -144,7 +143,6 @@ export default function OrderDetailPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left">Товар</th>
-                {/* <th className="px-4 py-3 text-left">Магазин</th> */}
                 <th className="px-4 py-3 text-right">Цена</th>
                 <th className="px-4 py-3 text-center">Количество</th>
                 <th className="px-4 py-3 text-right">Сумма</th>
@@ -154,7 +152,6 @@ export default function OrderDetailPage() {
               {order.items.map((item) => (
                 <tr key={item.id}>
                   <td className="px-4 py-3">{item.product.name}</td>
-                  {/* <td className="px-4 py-3">{item.store_name}</td> */}
                   <td className="px-4 py-3 text-right">{item.price} ₽</td>
                   <td className="px-4 py-3 text-center">{item.quantity}</td>
                   <td className="px-4 py-3 text-right">{item.price * item.quantity} ₽</td>

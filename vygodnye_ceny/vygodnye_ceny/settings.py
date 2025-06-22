@@ -25,7 +25,11 @@ SECRET_KEY = 'django-insecure-&*&bc=s&-vb*(2bdj6ghp0$xyto3!08114csjpmihf)q&c%l=l
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "82.202.137.122",  # ← твой внешний IP (или домен, если есть)
+]
 
 
 # Application definition
@@ -81,7 +85,6 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-
     }
 }
 
@@ -125,16 +128,16 @@ DJOSER = {
 
 AUTH_USER_MODEL = 'auth.User'
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-]
-
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",         # локально
+    "http://82.202.137.122:3000",    # сервер, фронт на 3000 порту
 ]
-
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://82.202.137.122:3000",
+]
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 

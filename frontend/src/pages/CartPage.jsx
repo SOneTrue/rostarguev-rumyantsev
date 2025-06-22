@@ -130,7 +130,7 @@ export default function CartPage() {
           </table>
         </div>
 
-        {/* итог + кнопка оформления */}
+
         <div className="mt-6 flex justify-end">
           <div className="bg-white rounded-lg shadow p-4 w-full sm:w-auto sm:min-w-[280px] text-right">
             <div className="text-lg mb-3 font-semibold">
@@ -151,7 +151,6 @@ export default function CartPage() {
         </div>
       </div>
 
-      {/* --- Модальное окно оформления заказа --- */}
       <CheckoutModal
         open={showModal}
         onClose={() => setShowModal(false)}

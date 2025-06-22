@@ -1,4 +1,3 @@
-// src/api/index.js
 import axios from "axios";
 
 /*────────────────────  ОБЩИЕ ФУНКЦИИ  ────────────────────*/
@@ -9,16 +8,19 @@ function setTokens({ access, refresh }) {
   if (refresh) localStorage.setItem("refresh", refresh);
 }
 
+/*────────────────────  API URL из .env ────────────────────*/
+const API_URL = import.meta.env.VITE_API_URL;
+
 /*────────────────────  СОЗДАЁМ БАЗОВЫЕ ИНСТАНСЫ  ────────────────────*/
 export const api = axios.create({
-  baseURL: "http://localhost:8000/api",
+  baseURL: `${API_URL}/api`,
   withCredentials: true,
   xsrfCookieName: "csrftoken",
   xsrfHeaderName: "X-CSRFToken",
 });
 
 export const authApi = axios.create({
-  baseURL: "http://localhost:8000",
+  baseURL: API_URL,
   withCredentials: true,
   xsrfCookieName: "csrftoken",
   xsrfHeaderName: "X-CSRFToken",
@@ -58,14 +60,12 @@ async function refreshToken() {
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
     window.location.href = "/login";
-    // window.location.reload(); // (по желанию)
   } finally {
     refreshing = false;
     queue = [];
   }
 }
 
-// Перехватчик ошибок для автоматического refresh токена
 api.interceptors.response.use(
   (r) => r,
   async (error) => {
@@ -86,7 +86,6 @@ api.interceptors.response.use(
 );
 
 /*────────────────────  ЭКСПОРТЫ API  ────────────────────*/
-/* товары / магазины / предложения */
 export const fetchProducts = async () => {
   const { data } = await api.get("/products/");
   return Array.isArray(data) ? data : [];

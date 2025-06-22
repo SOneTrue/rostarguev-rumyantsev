@@ -1,7 +1,6 @@
 from rest_framework import serializers, viewsets, routers, permissions
 from .models import Category, Store, Product, StoreProduct, PriceSuggestion, CartItem
 
-# ---------- сериалайзеры ----------
 
 class CategorySer(serializers.ModelSerializer):
     class Meta: model = Category; fields = ["id", "name"]
@@ -29,7 +28,6 @@ class CartItemSer(serializers.ModelSerializer):
         model = CartItem
         fields = ["id", "product", "quantity"]
 
-# ---------- вьюсеты ----------
 
 class ProductView(viewsets.ReadOnlyModelViewSet):
     queryset = Product.objects.prefetch_related("storeproduct_set__store")
@@ -47,7 +45,7 @@ class StoreView(viewsets.ReadOnlyModelViewSet):
 class PriceSuggestionView(viewsets.ModelViewSet):
     queryset = PriceSuggestion.objects.all()
     serializer_class = PriceSuggestionSer
-    permission_classes = [permissions.AllowAny]          # гость может предлагать цену
+    permission_classes = [permissions.AllowAny]
 
 class CartItemView(viewsets.ModelViewSet):
     serializer_class = CartItemSer
@@ -59,7 +57,6 @@ class CartItemView(viewsets.ModelViewSet):
     def perform_create(self, ser):
         ser.save(user=self.request.user)
 
-# ---------- роутер ----------
 router = routers.DefaultRouter()
 router.register("products", ProductView)
 router.register("categories", CategoryView)

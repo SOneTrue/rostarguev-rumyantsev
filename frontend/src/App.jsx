@@ -11,11 +11,11 @@ import RegisterPage from './pages/RegisterPage';
 
 import { CartProvider } from './contexts/CartContext';
 import { AuthProvider } from './contexts/AuthContext';
-import OrderDetailPage from "@/pages/OrderDetailPage.jsx"; // 👈 добавлено
+import OrderDetailPage from "@/pages/OrderDetailPage.jsx";
 
 export default function App() {
   return (
-    <AuthProvider> {/* 👈 обёртка контекста авторизации */}
+    <AuthProvider>
       <CartProvider>
         <div className="min-h-screen flex flex-col bg-gray-50">
           <Header />
@@ -37,3 +37,4 @@ export default function App() {
     </AuthProvider>
   );
 }
+

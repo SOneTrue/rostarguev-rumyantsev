@@ -13,3 +13,5 @@ class PriceSuggestionForm(forms.ModelForm):
             "author":          forms.TextInput(attrs={"class": "border p-2 w-full", "placeholder": "Ваше имя"}),
             "comment":         forms.Textarea(attrs={"class": "border p-2 w-full h-24", "placeholder": "Комментарий (необязательно)"}),
         }
+
+

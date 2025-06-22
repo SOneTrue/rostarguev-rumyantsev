@@ -10,7 +10,6 @@ export default function ProductCard({ product }) {
     setInCart(!!found);
   }, [items, product.id]);
 
-  // Добавляем товар с минимальной ценой, магазином и остатком
   const handleAdd = () => {
     setError('');
     const sortedPrices = [...product.prices].sort((a, b) => a.price - b.price);
@@ -22,7 +21,7 @@ export default function ProductCard({ product }) {
       price: cheapest.price,
       store: cheapest.store?.name ?? '-',
       store_id: cheapest.store?.id ?? cheapest.store,
-      stock: cheapest.stock ?? 99, // Передай сюда stock, если есть!
+      stock: cheapest.stock ?? 99,
     });
 
     setInCart(true);

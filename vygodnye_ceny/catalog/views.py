@@ -40,7 +40,7 @@ def api_product_list(request):
                 "store": {"id": sp.store.id, "name": sp.store.name},
                 "price": float(sp.price),
                 "discount": sp.discount,
-                "stock": sp.stock,  # <= Добавить!
+                "stock": sp.stock,
             }
             for sp in stores
         ]
@@ -187,7 +187,6 @@ def api_cart_add(request):
     if not sp:
         return Response({"error": "Нет цены для этого товара в магазине"}, status=400)
 
-    # ⬇️ НОВОЕ: если quantity <= 0 — УДАЛЯЕМ товар из корзины!
     if quantity <= 0:
         CartItem.objects.filter(
             user=request.user,

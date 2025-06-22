@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { fetchProducts } from "../api";
 import { useCart } from "../contexts/CartContext";
 
-const PAGE_SIZE_4 = 16; // 4 строки по 4 товара
-const PAGE_SIZE_5 = 15; // 3 строки по 5 товаров
+const PAGE_SIZE_4 = 16;
+const PAGE_SIZE_5 = 15;
 
 export default function HomePage() {
   const [products, setProducts] = useState([]);
@@ -16,7 +16,7 @@ export default function HomePage() {
   const [store, setStore] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [view, setView] = useState("4"); // "4" или "5"
+  const [view, setView] = useState("4");
   const pageSize = view === "5" ? PAGE_SIZE_5 : PAGE_SIZE_4;
   const [cartError, setCartError] = useState("");
 
@@ -45,6 +45,7 @@ export default function HomePage() {
     }
     loadAll();
   }, []);
+
 
   // Фильтрация и поиск
   useEffect(() => {

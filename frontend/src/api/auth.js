@@ -1,14 +1,16 @@
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: API_URL,
   withCredentials: true,
 });
 
 /* ---------- регистрация ---------- */
 export const register = ({ email, password }) =>
   api.post('/auth/users/', {
-    username: email,     // 👈  дублируем e‑mail
+    username: email,
     email,
     password,
   });
@@ -16,7 +18,7 @@ export const register = ({ email, password }) =>
 /* ---------- логин ---------- */
 export const login = ({ email, password }) =>
   api.post('/auth/jwt/create/', {
-    username: email,   //  ←  без username Django выдаёт ошибку
+    username: email,
     email,
     password,
   });
