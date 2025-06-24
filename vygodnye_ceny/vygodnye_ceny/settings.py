@@ -132,11 +132,11 @@ CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",         # локально
-    "http://82.202.137.122:3000",    # сервер, фронт на 3000 порту
+    "http://213.171.24.80:3000",    # сервер, фронт на 3000 порту
 ]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
-    "http://82.202.137.122:3000",
+    "http://213.171.24.80:3000",
 ]
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/

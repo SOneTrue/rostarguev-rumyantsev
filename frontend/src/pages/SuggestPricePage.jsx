@@ -15,11 +15,11 @@ export default function SuggestPricePage() {
 
   useEffect(() => {
     // Получаем список товаров и магазинов
-    fetch('http://localhost:8000/api/products/')
+    fetch('http://213.171.24.80:8000/api/products/')
       .then((res) => res.json())
       .then((data) => setProducts(data));
 
-    fetch('http://localhost:8000/api/stores/')
+    fetch('http://213.171.24.80:8000/api/stores/')
       .then((res) => res.json())
       .then((data) => setStores(data));
   }, []);

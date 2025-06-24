@@ -70,7 +70,6 @@ export const CartProvider = ({ children }) => {
     setLoading(false);
   }
 
-  // Удалить товар (через обнуление количества)
   async function remove(id, store_id) {
     setError("");
     setLoading(true);
@@ -78,7 +77,7 @@ export const CartProvider = ({ children }) => {
       await api.post("/cart/add/", {
         product: id,
         store: store_id,
-        quantity: 0, // Сервер должен удалить или игнорировать item с qty=0
+        quantity: 0,
       });
       await fetchCart();
     } catch (e) {

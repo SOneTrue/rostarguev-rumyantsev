@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 
+const API_URL = import.meta.env.VITE_API_URL; // ← добавили
+
 export default function OrderDetailPage() {
   const { orderId } = useParams();
   const navigate = useNavigate();
@@ -40,9 +42,9 @@ export default function OrderDetailPage() {
     }
   }
 
-  // Скачать PDF чек
+  // Скачать PDF чек (через fetch с абсолютным URL)
   function downloadPDFReceipt() {
-    fetch(`/api/orders/${orderId}/receipt/`, {
+    fetch(`${API_URL}/api/orders/${orderId}/receipt/`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('access')}`,
       }
@@ -63,9 +65,26 @@ export default function OrderDetailPage() {
       .catch(() => alert("Ошибка при скачивании PDF чека"));
   }
 
-  // Открыть чек в новой вкладке и сразу вызвать печать
+  // Альтернативно: Скачать PDF чек через axios (api instance)
+  // function downloadPDFReceipt() {
+  //   api.get(`/orders/${orderId}/receipt/`, {
+  //     responseType: 'blob'
+  //   })
+  //     .then(({ data }) => {
+  //       const url = window.URL.createObjectURL(data instanceof Blob ? data : new Blob([data]));
+  //       const a = document.createElement('a');
+  //       a.href = url;
+  //       a.download = `order_${orderId}_receipt.pdf`;
+  //       document.body.appendChild(a);
+  //       a.click();
+  //       document.body.removeChild(a);
+  //     })
+  //     .catch(() => alert("Ошибка при скачивании PDF чека"));
+  // }
+
+  // Открыть чек в новой вкладке и сразу вызвать печать (через fetch)
   function printPDFReceipt() {
-    fetch(`/api/orders/${orderId}/receipt/`, {
+    fetch(`${API_URL}/api/orders/${orderId}/receipt/`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('access')}`,
       }
@@ -129,8 +148,8 @@ export default function OrderDetailPage() {
               {order.payment_method === "card"
                 ? "Картой при получении"
                 : order.payment_method === "cash"
-                ? "Наличными"
-                : "-"}
+                  ? "Наличными"
+                  : "-"}
             </div>
             <div className="mb-1">
               <strong>Адрес:</strong> {order.address || "-"}

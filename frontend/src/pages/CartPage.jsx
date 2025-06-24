@@ -11,19 +11,16 @@ export default function CartPage() {
   const [inputErrors, setInputErrors] = useState({});
   const [showModal, setShowModal] = useState(false);
 
-  // Для итоговой интеграции с API: сюда добавь новые поля!
   async function handleCheckoutSubmit(fields) {
     setError("");
     setLoading(true);
     try {
-      // Собери orderItems для API (если нужно)
       const orderItems = items.map(it => ({
         product: it.id,
         quantity: it.quantity,
         price: it.price
       }));
 
-      // Отправь на backend вместе с полями из формы:
       await checkout({
         full_name: fields.full_name,
         phone: fields.phone,
@@ -36,7 +33,7 @@ export default function CartPage() {
       navigate("/account");
     } catch (e) {
       setError("Не удалось оформить заказ. Попробуйте позже.");
-      throw e; // для вывода ошибки в модалке
+      throw e;
     } finally {
       setLoading(false);
     }
@@ -87,12 +84,14 @@ export default function CartPage() {
             <tbody>
               {items.map((it) => {
                 const key = it.id + '-' + it.store_id;
+                const errorText = inputErrors[it.id + '-' + it.store_id];
                 return (
                   <tr key={key} className="border-t text-sm">
                     <td className="p-3 font-medium">{it.name}</td>
                     <td className="p-3">{it.store ?? "-"}</td>
                     <td className="p-3 text-right">{it.price} ₽</td>
-                    <td className="p-3 text-center">
+                    {/* Исправлено: задаём min-h и резервируем место под ошибку/наличие */}
+                    <td className="p-3 text-center min-h-[60px] align-middle">
                       <input
                         type="number"
                         min="1"
@@ -101,16 +100,18 @@ export default function CartPage() {
                         onChange={e => handleChangeQty(it, e.target.value)}
                         className="w-16 border rounded text-center"
                       />
-                      {inputErrors[it.id + '-' + it.store_id] && (
-                        <div className="text-xs text-red-500">
-                          {inputErrors[it.id + '-' + it.store_id]}
-                        </div>
-                      )}
-                      {it.stock !== undefined && (
-                        <div className="text-xs text-gray-400">
-                          в наличии: {it.stock}
-                        </div>
-                      )}
+                      <div style={{ minHeight: 32 }}>
+                        {errorText ? (
+                          <div className="text-xs text-red-500">{errorText}</div>
+                        ) : (
+                          <div className="text-xs" style={{ height: 16 }}>&nbsp;</div>
+                        )}
+                        {it.stock !== undefined ? (
+                          <div className="text-xs text-gray-400">в наличии: {it.stock}</div>
+                        ) : (
+                          <div className="text-xs" style={{ height: 16 }}>&nbsp;</div>
+                        )}
+                      </div>
                     </td>
                     <td className="p-3 text-right font-semibold">
                       {it.price * it.quantity} ₽
@@ -129,7 +130,6 @@ export default function CartPage() {
             </tbody>
           </table>
         </div>
-
 
         <div className="mt-6 flex justify-end">
           <div className="bg-white rounded-lg shadow p-4 w-full sm:w-auto sm:min-w-[280px] text-right">
